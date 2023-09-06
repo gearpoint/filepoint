@@ -4,9 +4,7 @@ import (
 	"errors"
 	"time"
 
-	"github.com/gearpoint/filepoint/pkg/logger"
 	"github.com/spf13/viper"
-	"go.uber.org/zap"
 )
 
 // App config struct
@@ -18,6 +16,7 @@ type Config struct {
 
 // Server config struct
 type ServerConfig struct {
+	Environment       string
 	Port              int
 	ReadTimeout       time.Duration
 	WriteTimeout      time.Duration
@@ -47,16 +46,15 @@ type S3 struct {
 	UseSSL    bool
 }
 
-// Load config file from given path
-func LoadConfig(filename string) (*viper.Viper, error) {
+// LoadConfig loads file from given path.
+func LoadConfig(path string) (*viper.Viper, error) {
 	v := viper.New()
-
-	v.SetConfigName(filename)
+	v.SetConfigFile(path)
 	v.AddConfigPath(".")
-	v.AutomaticEnv()
+
 	if err := v.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
-			return nil, errors.New("config file not found")
+			return nil, errors.New("Config file not found")
 		}
 		return nil, err
 	}
@@ -71,8 +69,6 @@ func ParseConfig(v *viper.Viper) (*Config, error) {
 
 	err := v.Unmarshal(&c)
 	if err != nil {
-		logger.Error("Unable to decode into struct", zap.Error(err))
-
 		return nil, err
 	}
 

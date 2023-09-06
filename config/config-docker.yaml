@@ -1,5 +1,5 @@
 server:
-  Port: :9001
+  Port: 9001
   ReadTimeout: 10
   WriteTimeout: 10
   SSL: true

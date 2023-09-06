@@ -8,12 +8,13 @@ import (
 	"github.com/gearpoint/filepoint/pkg/aws"
 	"github.com/gearpoint/filepoint/pkg/logger"
 	"github.com/gearpoint/filepoint/pkg/redis"
-	"go.uber.org/zap"
-
+	"github.com/gearpoint/filepoint/pkg/utils"
 	"github.com/joho/godotenv"
+	"go.uber.org/zap"
 )
 
 var (
+	// configFile is the main configuration filepath.
 	configFile string
 )
 
@@ -25,14 +26,23 @@ var (
 // @contact.email luanbaggio0@gmail.com
 // @BasePath /v1
 func main() {
-	logger.Info("Starting Filepoint server...")
-
 	godotenv.Load()
 
-	flag.StringVar(&configFile, "config", "./config/config-local.yaml", "aaa")
+	envType := utils.GetEnvironmentType()
+
+	logger.InitLogger(envType)
+	logger.Info("Starting Filepoint server...")
+
+	flag.StringVar(&configFile, "config", "./config/config-docker.yaml", "aaa")
 	flag.Parse()
 
 	viperConfig, err := config.LoadConfig(configFile)
+	if err != nil {
+		logger.Fatal("Error initializing config",
+			zap.Error(err),
+		)
+	}
+
 	cfg, err := config.ParseConfig(viperConfig)
 	if err != nil {
 		logger.Fatal("Error getting config",
@@ -52,10 +62,10 @@ func main() {
 	}
 	logger.Info("AWS S3 connected")
 
+	logger.Info("Filepoint on!")
+
 	s := server.NewServer(cfg, redisClient, s3Client)
 	if err = s.Run(); err != nil {
 		logger.Fatal("Error starting server")
 	}
-
-	logger.Info("Filepoint on!")
 }
