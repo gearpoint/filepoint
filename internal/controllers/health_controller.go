@@ -10,14 +10,12 @@ import (
 // HealthController is used for health check.
 type HealthController struct{}
 
-// @BasePath /v1/health
 // HealthCheck godoc
 // @Summary Health check
 // @Schemes
 // @Description Returns a 200 OK response
-// @Tags example
-// @Accept json
-// @Produce json
+// @Tags HealthCheck
+// @Produce plain
 // @Success 200 {string} OK
 // @Router /health [get]
 func (h HealthController) HealthCheck(c *gin.Context) {

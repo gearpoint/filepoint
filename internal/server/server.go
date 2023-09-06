@@ -20,7 +20,7 @@ const (
 // Server struct
 type Server struct {
 	Engine      *gin.Engine
-	cfg         *config.Config
+	config      *config.ServerConfig
 	redisClient *redis.Client
 	s3Client    *s3.Client
 }
@@ -29,7 +29,7 @@ type Server struct {
 func NewServer(cfg *config.Config, redisClient *redis.Client, s3Client *s3.Client) *Server {
 	return &Server{
 		Engine:      gin.New(),
-		cfg:         cfg,
+		config:      &cfg.Server,
 		redisClient: redisClient,
 		s3Client:    s3Client,
 	}
@@ -50,7 +50,7 @@ func (s *Server) Run() error {
 
 	s.MapHandlers()
 
-	port := s.getAddres(s.cfg.Server.Port)
+	port := s.getAddres(s.config.Port)
 	s.Engine.Run(port)
 
 	return nil

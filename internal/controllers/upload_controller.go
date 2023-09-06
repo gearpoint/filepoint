@@ -23,15 +23,13 @@ func NewUploadController(cfg UploadConfig) *UploadController {
 	return &UploadController{config: cfg}
 }
 
-// @BasePath /v1/upload
 // Upload godoc
 // @Summary File upload
 // @Schemes
 // @Description Saves a file in the storage service
-// @Tags example
+// @Tags Upload
 // @Accept json
-// @Produce json
-// @Success 200 {string} OK
+// @Success 204
 // @Router /upload [post]
 func (u UploadController) Upload(c *gin.Context) {
 	id := uuid.NewV4().String()

@@ -7,22 +7,18 @@
             "name": "Luan Baggio",
             "url": "https://github.com/luabagg",
             "email": "luanbaggio0@gmail.com"
-        },
-        "version": "1.0"
+        }
     },
     "basePath": "/v1",
     "paths": {
         "/health": {
             "get": {
                 "description": "Returns a 200 OK response",
-                "consumes": [
-                    "application/json"
-                ],
                 "produces": [
-                    "application/json"
+                    "text/plain"
                 ],
                 "tags": [
-                    "example"
+                    "HealthCheck"
                 ],
                 "summary": "Health check",
                 "responses": {
@@ -41,19 +37,13 @@
                 "consumes": [
                     "application/json"
                 ],
-                "produces": [
-                    "application/json"
-                ],
                 "tags": [
-                    "example"
+                    "Upload"
                 ],
                 "summary": "File upload",
                 "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "string"
-                        }
+                    "204": {
+                        "description": "No Content"
                     }
                 }
             }

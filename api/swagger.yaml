@@ -6,15 +6,12 @@ info:
     url: https://github.com/luabagg
   description: Filepoint is the Gearpoint's file manager service.
   title: Filepoint
-  version: "1.0"
 paths:
   /health:
     get:
-      consumes:
-      - application/json
       description: Returns a 200 OK response
       produces:
-      - application/json
+      - text/plain
       responses:
         "200":
           description: OK
@@ -22,20 +19,16 @@ paths:
             type: string
       summary: Health check
       tags:
-      - example
+      - HealthCheck
   /upload:
     post:
       consumes:
       - application/json
       description: Saves a file in the storage service
-      produces:
-      - application/json
       responses:
-        "200":
-          description: OK
-          schema:
-            type: string
+        "204":
+          description: No Content
       summary: File upload
       tags:
-      - example
+      - Upload
 swagger: "2.0"

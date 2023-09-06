@@ -2,7 +2,9 @@ package main
 
 import (
 	"flag"
+	"os"
 
+	"github.com/gearpoint/filepoint/api"
 	config "github.com/gearpoint/filepoint/config"
 	"github.com/gearpoint/filepoint/internal/server"
 	"github.com/gearpoint/filepoint/pkg/aws"
@@ -19,7 +21,6 @@ var (
 )
 
 // @title Filepoint
-// @version 1.0
 // @description Filepoint is the Gearpoint's file manager service.
 // @contact.name Luan Baggio
 // @contact.url https://github.com/luabagg
@@ -62,7 +63,17 @@ func main() {
 	}
 	logger.Info("AWS S3 connected")
 
-	logger.Info("Filepoint on!")
+	var version string
+
+	versionByte, err := os.ReadFile("VERSION")
+	if err == nil {
+		version = string(versionByte)
+	}
+	api.SwaggerInfo.Version = version
+
+	logger.Info("Filepoint on!",
+		zap.String("version", version),
+	)
 
 	s := server.NewServer(cfg, redisClient, s3Client)
 	if err = s.Run(); err != nil {

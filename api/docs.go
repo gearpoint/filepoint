@@ -22,14 +22,11 @@ const docTemplate = `{
         "/health": {
             "get": {
                 "description": "Returns a 200 OK response",
-                "consumes": [
-                    "application/json"
-                ],
                 "produces": [
-                    "application/json"
+                    "text/plain"
                 ],
                 "tags": [
-                    "example"
+                    "HealthCheck"
                 ],
                 "summary": "Health check",
                 "responses": {
@@ -48,19 +45,13 @@ const docTemplate = `{
                 "consumes": [
                     "application/json"
                 ],
-                "produces": [
-                    "application/json"
-                ],
                 "tags": [
-                    "example"
+                    "Upload"
                 ],
                 "summary": "File upload",
                 "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "string"
-                        }
+                    "204": {
+                        "description": "No Content"
                     }
                 }
             }
@@ -70,7 +61,7 @@ const docTemplate = `{
 
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
-	Version:          "1.0",
+	Version:          "",
 	Host:             "",
 	BasePath:         "/v1",
 	Schemes:          []string{},
