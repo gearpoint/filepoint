@@ -1,3 +1,4 @@
+// package redis contains the Redis functions and configurations.
 package redis
 
 import (
@@ -7,7 +8,7 @@ import (
 	"github.com/go-redis/redis/v8"
 )
 
-// Returns new redis client
+// NewRedisClient returns a new redis client instance.
 func NewRedisClient(redisCfg *config.RedisConfig) *redis.Client {
 	redisHost := redisCfg.RedisAddr
 
@@ -20,8 +21,8 @@ func NewRedisClient(redisCfg *config.RedisConfig) *redis.Client {
 		MinIdleConns: redisCfg.MinIdleConns,
 		PoolSize:     redisCfg.PoolSize,
 		PoolTimeout:  time.Duration(redisCfg.PoolTimeout) * time.Second,
-		Password:     redisCfg.Password, // no password set
-		DB:           redisCfg.DB,       // use default DB
+		Password:     redisCfg.Password,
+		DB:           redisCfg.DB,
 	})
 
 	return client

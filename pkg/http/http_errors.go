@@ -38,36 +38,36 @@ var (
 	NotAllowedImageHeader = errors.New("Not allowed image header")
 )
 
-// Rest error interface
+// RestErr is the REST errors interface.
 type RestErr interface {
 	Status() int
 	Error() string
 	Causes() interface{}
 }
 
-// Rest error struct
+// RestError contains the REST errors.
 type RestError struct {
 	ErrStatus int         `json:"status,omitempty"`
 	ErrError  string      `json:"error,omitempty"`
 	ErrCauses interface{} `json:"-"`
 }
 
-// Error  Error() interface method
+// Error is the errors interface method.
 func (e RestError) Error() string {
 	return fmt.Sprintf("status: %d - errors: %s - causes: %v", e.ErrStatus, e.ErrError, e.ErrCauses)
 }
 
-// Error status
+// Status returns the error status.
 func (e RestError) Status() int {
 	return e.ErrStatus
 }
 
-// RestError Causes
+// Causes returns the error causes.
 func (e RestError) Causes() interface{} {
 	return e.ErrCauses
 }
 
-// New Rest Error
+// NewRestError inits a RestError instance.
 func NewRestError(status int, err string, causes interface{}) RestErr {
 	return RestError{
 		ErrStatus: status,
@@ -76,7 +76,7 @@ func NewRestError(status int, err string, causes interface{}) RestErr {
 	}
 }
 
-// New Rest Error With Message
+// NewRestErrorWithMessage returns an error with a message.
 func NewRestErrorWithMessage(status int, err string, causes interface{}) RestErr {
 	return RestError{
 		ErrStatus: status,
@@ -85,7 +85,7 @@ func NewRestErrorWithMessage(status int, err string, causes interface{}) RestErr
 	}
 }
 
-// New Rest Error From Bytes
+// NewRestErrorFromBytes returns an error from bytes.
 func NewRestErrorFromBytes(bytes []byte) (RestErr, error) {
 	var apiErr RestError
 	if err := json.Unmarshal(bytes, &apiErr); err != nil {
@@ -94,7 +94,7 @@ func NewRestErrorFromBytes(bytes []byte) (RestErr, error) {
 	return apiErr, nil
 }
 
-// New Bad Request Error
+// NewBadRequestError is the default 400 error.
 func NewBadRequestError(causes interface{}) RestErr {
 	return RestError{
 		ErrStatus: http.StatusBadRequest,
@@ -103,7 +103,7 @@ func NewBadRequestError(causes interface{}) RestErr {
 	}
 }
 
-// New Not Found Error
+// NewNotFoundError is the default 404 error.
 func NewNotFoundError(causes interface{}) RestErr {
 	return RestError{
 		ErrStatus: http.StatusNotFound,
@@ -112,7 +112,7 @@ func NewNotFoundError(causes interface{}) RestErr {
 	}
 }
 
-// New Unauthorized Error
+// NewUnauthorizedError is the default 401 error.
 func NewUnauthorizedError(causes interface{}) RestErr {
 	return RestError{
 		ErrStatus: http.StatusUnauthorized,
@@ -121,7 +121,7 @@ func NewUnauthorizedError(causes interface{}) RestErr {
 	}
 }
 
-// New Forbidden Error
+// NewForbiddenError is the default 403 error.
 func NewForbiddenError(causes interface{}) RestErr {
 	return RestError{
 		ErrStatus: http.StatusForbidden,
@@ -130,7 +130,7 @@ func NewForbiddenError(causes interface{}) RestErr {
 	}
 }
 
-// New Internal Server Error
+// NewInternalServerError is the default 500 error.
 func NewInternalServerError(causes interface{}) RestErr {
 	result := RestError{
 		ErrStatus: http.StatusInternalServerError,

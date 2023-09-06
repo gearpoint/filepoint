@@ -46,3 +46,7 @@ generate:
 .PHONY: swagger
 swagger:
 	swag init -g cmd/filepoint/main.go --output api
+
+.PHONY: godoc
+godoc:
+	godoc -http=:6060

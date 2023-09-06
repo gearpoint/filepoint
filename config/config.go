@@ -7,14 +7,14 @@ import (
 	"github.com/spf13/viper"
 )
 
-// App config struct
+// Config is the app main config struct.
 type Config struct {
 	Server ServerConfig
 	Redis  RedisConfig
-	S3     S3
+	AWS    AWS
 }
 
-// Server config struct
+// ServerConfig is the server configuration struct.
 type ServerConfig struct {
 	Environment       string
 	Port              int
@@ -25,7 +25,7 @@ type ServerConfig struct {
 	Debug             bool
 }
 
-// Redis config
+// RedisConfig is the Redis configuration.
 type RedisConfig struct {
 	RedisAddr      string
 	RedisPassword  string
@@ -38,8 +38,8 @@ type RedisConfig struct {
 	DB             int
 }
 
-// AWS S3
-type S3 struct {
+// AWS is the Amazon Web Services configuration.
+type AWS struct {
 	Endpoint  string
 	AccessKey string
 	SecretKey string

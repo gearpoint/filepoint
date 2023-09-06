@@ -1,3 +1,4 @@
+// package aws contains the Amazon Web Services functions and configurations.
 package aws
 
 import (
@@ -8,8 +9,9 @@ import (
 	"github.com/gearpoint/filepoint/config"
 )
 
-func NewS3Client(awsCfg *config.S3) (*s3.Client, error) {
-	cfg, err := awsConfig.LoadDefaultConfig(context.TODO())
+// NewAWSClient returns a new AWS SDK v2 client instance.
+func NewAWSClient(awsCfg *config.AWS) (*s3.Client, error) {
+	cfg, err := awsConfig.LoadDefaultConfig(context.Background())
 	if err != nil {
 		return nil, err
 	}

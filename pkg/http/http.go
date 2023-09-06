@@ -11,7 +11,6 @@ import (
 	"github.com/gearpoint/filepoint/pkg/utils"
 	"github.com/gin-contrib/requestid"
 	"github.com/gin-gonic/gin"
-	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 
 	"github.com/AleksK1NG/api-mc/pkg/sanitize"
@@ -51,15 +50,16 @@ func GetIPAddress(c *gin.Context) string {
 	return c.Request.RemoteAddr
 }
 
-// Read request body and validate
-func ReadRequest(ctx echo.Context, request interface{}) error {
+// ReadRequest gets the request body and validates it.
+func ReadRequest(ctx *gin.Context, request interface{}) error {
 	if err := ctx.Bind(request); err != nil {
 		return err
 	}
-	return utils.Validate.StructCtx(ctx.Request().Context(), request)
+	return utils.Validate.StructCtx(ctx.Request.Context(), request)
 }
 
-func ReadImage(ctx echo.Context, field string) (*multipart.FileHeader, error) {
+// ReadImage reads an image and return a FileHeader instance..
+func ReadImage(ctx *gin.Context, field string) (*multipart.FileHeader, error) {
 	image, err := ctx.FormFile(field)
 	if err != nil {
 		return nil, errors.WithMessage(err, "ctx.FormFile")
@@ -73,7 +73,7 @@ func ReadImage(ctx echo.Context, field string) (*multipart.FileHeader, error) {
 	return image, nil
 }
 
-// Read sanitize and validate request
+// SanitizeRequest sanitizes and validates the request.
 func SanitizeRequest(ctx *gin.Context, request interface{}) error {
 	body, err := io.ReadAll(ctx.Request.Body)
 	if err != nil {

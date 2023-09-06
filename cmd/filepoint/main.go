@@ -53,15 +53,19 @@ func main() {
 
 	redisClient := redis.NewRedisClient(&cfg.Redis)
 	defer redisClient.Close()
-	logger.Info("Redis connected")
+	logger.Info("Redis connected",
+		zap.String("address", cfg.Redis.RedisAddr),
+	)
 
-	s3Client, err := aws.NewS3Client(&cfg.S3)
+	s3Client, err := aws.NewAWSClient(&cfg.AWS)
 	if err != nil {
 		logger.Fatal("AWS Client init error",
 			zap.Error(err),
 		)
 	}
-	logger.Info("AWS S3 connected")
+	logger.Info("AWS S3 connected",
+		zap.String("endpoint", cfg.AWS.Endpoint),
+	)
 
 	var version string
 
