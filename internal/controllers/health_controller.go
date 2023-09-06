@@ -10,14 +10,11 @@ import (
 // HealthController is used for health check.
 type HealthController struct{}
 
-// HealthCheck returns a 200 OK response.
-
 // @BasePath /v1/health
-
 // HealthCheck godoc
-// @Summary health check
+// @Summary Health check
 // @Schemes
-// @Description returns a 200 OK response
+// @Description Returns a 200 OK response
 // @Tags example
 // @Accept json
 // @Produce json

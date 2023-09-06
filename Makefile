@@ -42,3 +42,7 @@ integration-test: prepare
 .PHONY: generate
 generate:
 	go generate ./...
+
+.PHONY: swagger
+swagger:
+	swag init -g cmd/filepoint/main.go --output api

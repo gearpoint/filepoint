@@ -1,0 +1,41 @@
+basePath: /v1
+info:
+  contact:
+    email: luanbaggio0@gmail.com
+    name: Luan Baggio
+    url: https://github.com/luabagg
+  description: Filepoint is the Gearpoint's file manager service.
+  title: Filepoint
+  version: "1.0"
+paths:
+  /health:
+    get:
+      consumes:
+      - application/json
+      description: Returns a 200 OK response
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      summary: Health check
+      tags:
+      - example
+  /upload:
+    post:
+      consumes:
+      - application/json
+      description: Saves a file in the storage service
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      summary: File upload
+      tags:
+      - example
+swagger: "2.0"

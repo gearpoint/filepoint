@@ -23,10 +23,11 @@ func NewUploadController(cfg UploadConfig) *UploadController {
 	return &UploadController{config: cfg}
 }
 
+// @BasePath /v1/upload
 // Upload godoc
-// @Summary file upload
+// @Summary File upload
 // @Schemes
-// @Description saves a file in the storage service
+// @Description Saves a file in the storage service
 // @Tags example
 // @Accept json
 // @Produce json
