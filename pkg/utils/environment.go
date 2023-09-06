@@ -1,7 +1,10 @@
 package utils
 
-import (
-	"os"
+import "os"
+
+const (
+	// The EnvironmentKey defines the key that contains the environment config.
+	EnvironmentKey string = "Environment"
 )
 
 // The EnvironmentType defines the app environment.
@@ -30,7 +33,7 @@ func GetEnvOrDefault(key string, fallback string) string {
 
 // GetEnvironmentType returns the app environment.
 func GetEnvironmentType() EnvironmentType {
-	envType := GetEnv("environment")
+	envType := GetEnv(EnvironmentKey)
 
 	switch envType {
 	case "production":

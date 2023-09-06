@@ -7,6 +7,7 @@ import (
 
 	"github.com/gearpoint/filepoint/pkg/utils"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 // loggerKeyType is used to identify the
@@ -17,12 +18,15 @@ const loggerKey loggerKeyType = iota
 // The zap.Logger variable.
 var Logger *zap.Logger
 
-func init() {
+// InitLogger configures and initializes the zap logger.
+func InitLogger(envType utils.EnvironmentType) {
 	var err error
 
-	switch utils.GetEnvironmentType() {
+	switch envType {
 	case utils.Development:
-		Logger, err = zap.NewDevelopment()
+		config := zap.NewDevelopmentConfig()
+		config.EncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
+		Logger, err = config.Build()
 	case utils.Production:
 		Logger, err = zap.NewProduction()
 	}
