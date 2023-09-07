@@ -1,12 +1,23 @@
-server:
-  Port: 9001
+Server:
   ReadTimeout: 10
   WriteTimeout: 10
   SSL: true
   CtxDefaultTimeout: 12
   Debug: false
 
-redis:
+Aws:
+  Endpoint: 127.0.0.1:9000
+  AccessKey: aws
+  SecretKey: 123
+  UseSSL: false
+
+Kafka:
+  Brokers:
+    - 'broker1'
+  Topics:
+    - 'topic1'
+
+Redis:
   RedisAddr: redis:6379
   RedisPassword:
   RedisDb: 0
@@ -16,9 +27,3 @@ redis:
   PoolTimeout: 240
   Password: ""
   DB: 0
-
-aws:
-  Endpoint: 127.0.0.1:9000
-  AccessKey: aws
-  SecretKey: 123
-  UseSSL: false

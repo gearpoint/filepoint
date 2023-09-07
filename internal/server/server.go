@@ -36,7 +36,7 @@ func NewServer(cfg *config.Config, redisClient *redis.Client, s3Client *s3.Clien
 }
 
 // getAddres returns a formatted address port.
-func (s *Server) getAddres(port int) string {
+func (s *Server) getAddres(port string) string {
 	return fmt.Sprintf(":%v", port)
 }
 
@@ -50,7 +50,7 @@ func (s *Server) Run() error {
 
 	s.MapHandlers()
 
-	port := s.getAddres(s.config.Port)
+	port := s.getAddres(s.config.Addr)
 	s.Engine.Run(port)
 
 	return nil

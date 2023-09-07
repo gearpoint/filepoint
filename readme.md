@@ -22,10 +22,10 @@ Filepoint is the Gearpoint's file manager service. It's built for performance.
 ## Tech Stack
 
 - Golang
-- Gin Framework as REST API
+- Gin Framework REST API
     - Zap Logger
     - Gin Swagger
     - Watermill
 - Apache Kafka for queueu proccess
 - AWS S3 storage service
-- Event Driven Architecture
+- Event driven architecture

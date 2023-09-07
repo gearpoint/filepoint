@@ -1,4 +1,4 @@
-FROM golang:1.18 as modules
+FROM golang:1.21 as modules
 
 ARG OS_NAME
 ARG ARCH
@@ -14,8 +14,7 @@ COPY Makefile go.mod go.sum ./
 RUN make deps
 
 # Start from the latest golang base image
-FROM golang:1.18 as builder
-
+FROM golang:1.21 as builder
 
 ARG OS_NAME
 ARG ARCH
@@ -30,15 +29,13 @@ COPY .  .
 RUN echo ${GOOS}/${GOARCH} > scripts/plataforms \
     && make clean test build-local
 
-
-
 ######## Start a new stage from scratch #######
 FROM alpine:latest
 
 RUN apk --no-cache add ca-certificates
 
-LABEL maintainer="Bling" \
- contributor="Luan Baggio <luan.baggio@bling.com.br>"
+LABEL maintainer="Gearpoint" \
+ contributor="Luan Baggio <luanbaggio0@gmail.com>"
 
 ARG OS_NAME
 ARG ARCH
@@ -51,8 +48,8 @@ ENV GOOS=${OS_NAME:-linux} \
 WORKDIR /app/
 
 COPY --from=builder /code/target/bin/${GOOS}_${GOARCH}/${APP_NAME}_*_${GOOS}_${GOARCH}  ./${APP_NAME}
-COPY ./configs/application.yaml ./configs/application.yaml
+COPY ./config/config-docker.yaml ./config/config-docker.yaml
 
-CMD ./${APP_NAME} -config ./configs/application.yml
+CMD ./${APP_NAME} -config ./config/config-docker.yaml
 
-ENTRYPOINT ["./bluebird"]
+ENTRYPOINT ["./filepoint"]

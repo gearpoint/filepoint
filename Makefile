@@ -8,6 +8,10 @@ endif
 
 default: clean test build-local
 
+.PHONY: run
+run:
+	go run cmd/filepoint/main.go
+
 .PHONY: deps
 deps:
 	go mod download

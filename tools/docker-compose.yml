@@ -1,19 +1,19 @@
 version: '3.9'
 services:
-  bluebird:
-    image: "bluebird"
-    container_name: bluebird
+  filepoint:
+    image: "filepoint"
+    container_name: filepoint
     depends_on:
       - kafka
     ports:
-     - "${BLUEBIRD_PORT}:${BLUEBIRD_PORT}"
+     - "8001:8000"
     build:
       context: ..
-      dockerfile: ../build/package/docker/Dockerfile
+      dockerfile: ./build/package/docker/Dockerfile
       args:
-        - BINARY=./cmd/bluebird/
+        - BINARY=./cmd/filepoint/
     volumes:
-      - ./configs:/app/configs
+      - ./config:/app/config
   zookeeper:
     image: confluentinc/cp-zookeeper:latest
     container_name: 'sv-zookeeper'

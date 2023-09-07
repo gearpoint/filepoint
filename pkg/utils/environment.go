@@ -4,7 +4,10 @@ import "os"
 
 const (
 	// The EnvironmentKey defines the key that contains the environment config.
-	EnvironmentKey string = "Environment"
+	EnvironmentKey string = "ENVIRONMENT"
+
+	// The AddrKey defines the key that contains the app address.
+	AddrKey string = "FILEPOINT_ADDR"
 )
 
 // The EnvironmentType defines the app environment.

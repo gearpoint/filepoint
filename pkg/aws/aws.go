@@ -10,7 +10,7 @@ import (
 )
 
 // NewAWSClient returns a new AWS SDK v2 client instance.
-func NewAWSClient(awsCfg *config.AWS) (*s3.Client, error) {
+func NewAWSClient(awsCfg *config.AWSConfig) (*s3.Client, error) {
 	cfg, err := awsConfig.LoadDefaultConfig(context.Background())
 	if err != nil {
 		return nil, err

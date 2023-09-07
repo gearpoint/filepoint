@@ -4,25 +4,41 @@ import (
 	"errors"
 	"time"
 
+	"github.com/gearpoint/filepoint/pkg/utils"
 	"github.com/spf13/viper"
 )
 
 // Config is the app main config struct.
 type Config struct {
 	Server ServerConfig
+	AWS    AWSConfig
+	Kafka  KafkaConfig
 	Redis  RedisConfig
-	AWS    AWS
 }
 
 // ServerConfig is the server configuration struct.
 type ServerConfig struct {
 	Environment       string
-	Port              int
+	Addr              string
 	ReadTimeout       time.Duration
 	WriteTimeout      time.Duration
 	SSL               bool
 	CtxDefaultTimeout time.Duration
 	Debug             bool
+}
+
+// AWSConfig is the Amazon Web Services configuration.
+type AWSConfig struct {
+	Endpoint  string
+	AccessKey string
+	SecretKey string
+	UseSSL    bool
+}
+
+// KafkaConfig is the Kafka configuration.
+type KafkaConfig struct {
+	Brokers []string
+	Topics  []string
 }
 
 // RedisConfig is the Redis configuration.
@@ -38,19 +54,12 @@ type RedisConfig struct {
 	DB             int
 }
 
-// AWS is the Amazon Web Services configuration.
-type AWS struct {
-	Endpoint  string
-	AccessKey string
-	SecretKey string
-	UseSSL    bool
-}
-
 // LoadConfig loads file from given path.
 func LoadConfig(path string) (*viper.Viper, error) {
 	v := viper.New()
 	v.SetConfigFile(path)
 	v.AddConfigPath(".")
+	v.SetDefault("Server.Addr", utils.GetEnv(utils.AddrKey))
 
 	if err := v.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); ok {

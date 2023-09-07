@@ -1,15 +1,13 @@
-# Bluebird
+# Filepoint
 
-Bluebird is an API designed to simplify the management of asynchronous calls. Bluebird offers exceptional control and flexibility over your async operations. With Bluebird, you can easily manage and track async requests, ensuring smooth and efficient processing.
+Filepoint is the Gearpoint's file manager service. It's built for performance.
 
-Built on the highly robust and flexible Gin Framework, Bluebird offers a host of features that help you manage and track async requests with ease. Whether you're dealing with a high volume of requests or complex workflows, Bluebird provides exceptional control and flexibility to ensure smooth and efficient processing.
-
-One of the standout features of Bluebird is its use of Kafka, a distributed messaging system that allows for highly scalable and fault-tolerant processing. By leveraging Kafka, Bluebird can handle even the most demanding of async workflows with ease, ensuring that your requests are processed quickly and accurately.
-
-## [Unreleased] -
-### Changed
-- Project structure according to https://github.com/golang-standards/project-layout[Golang Project Layout]
-- Migrate the package manager from Dep to go mod [https://blog.golang.org/migrating-to-go-modules]
-
-
-[Unreleased]: https://gitlab.bling.com.br/organisys/architecture/bluebird/-/tree/development
+## 1.0.0-SNAPSHOT
+First release of the app
+- Gin Framework REST API
+    - Zap Logger
+    - Gin Swagger
+    - Watermill
+- Apache Kafka for queueu proccess
+- AWS S3 storage service
+- Event driven architecture
