@@ -29,3 +29,43 @@ Filepoint is the Gearpoint's file manager service. It's built for performance.
 - Apache Kafka for queueu proccess
 - AWS S3 storage service
 - Event driven architecture
+
+## Building and running
+
+First of all, set the environment file:
+```sh
+cp .env.example .env
+```
+
+### Running in Go
+
+To run the project with go, use the following command:
+
+```sh
+go run cmd/filepoint/main.go -config ./config/config-local.yaml
+```
+
+
+### The binary
+
+To build the binary, use the available command in Makefile:
+
+```sh
+make build-local
+```
+
+### Docker image
+
+For the Docker image, use this Makefile command:
+
+```sh
+make build-image
+```
+
+### Docker Compose
+
+Just run:
+
+```sh
+docker compose build && docker compose up
+```

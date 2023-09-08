@@ -18,7 +18,6 @@ type Config struct {
 
 // ServerConfig is the server configuration struct.
 type ServerConfig struct {
-	Environment       string
 	Addr              string
 	ReadTimeout       time.Duration
 	WriteTimeout      time.Duration

@@ -24,7 +24,8 @@ ENV GOOS=${OS_NAME:-linux} \
     GOARCH=${ARCH:-amd64}
 
 WORKDIR /code
-COPY .  .
+
+COPY . .
 
 RUN echo ${GOOS}/${GOARCH} > scripts/plataforms \
     && make clean test build-local
@@ -40,16 +41,19 @@ LABEL maintainer="Gearpoint" \
 ARG OS_NAME
 ARG ARCH
 ARG BINARY_NAME
+ARG ADDRESS
 
 ENV GOOS=${OS_NAME:-linux} \
- GOARCH=${ARCH:-amd64} \
- APP_NAME=${BINARY_NAME}
+    GOARCH=${ARCH:-amd64} \
+    APP_NAME=${BINARY_NAME}
 
-WORKDIR /app/
+WORKDIR /app
 
-COPY --from=builder /code/target/bin/${GOOS}_${GOARCH}/${APP_NAME}_*_${GOOS}_${GOARCH}  ./${APP_NAME}
+COPY --from=builder /code/target/bin/${GOOS}_${GOARCH}/${APP_NAME}_*_${GOOS}_${GOARCH} ./${APP_NAME}
 COPY ./config/config-docker.yaml ./config/config-docker.yaml
 
-CMD ./${APP_NAME} -config ./config/config-docker.yaml
+RUN chmod +x ./${APP_NAME}
 
-ENTRYPOINT ["./filepoint"]
+EXPOSE ${ADDRESS}
+
+ENTRYPOINT ./${APP_NAME} -config ./config/config-docker.yaml

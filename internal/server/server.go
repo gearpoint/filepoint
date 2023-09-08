@@ -26,7 +26,9 @@ type Server struct {
 }
 
 // NewServer new server constructor
-func NewServer(cfg *config.Config, redisClient *redis.Client, s3Client *s3.Client) *Server {
+func NewServer(cfg *config.Config, redisClient *redis.Client, s3Client *s3.Client, ginReleaseMode string) *Server {
+	gin.SetMode(ginReleaseMode)
+
 	return &Server{
 		Engine:      gin.New(),
 		config:      &cfg.Server,

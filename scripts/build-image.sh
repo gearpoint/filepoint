@@ -33,5 +33,5 @@ binaries=$(ls $workdir/cmd)
 for b in $binaries ; do
     echo "building image to $b"
     echo "tag ${prefixtag}${b}${suffixtag} "
-    docker build --tag "${prefixtag}${b}${suffixtag}"  -f "${docker_dir}/Dockerfile"  --build-arg OS_NAME=${OS_}  --build-arg ARCH=${ARCH_} --build-arg BINARY_NAME=$b "${workdir}"
+    docker build --tag "${prefixtag}${b}${suffixtag}" -f "${docker_dir}/Dockerfile" --build-arg OS_NAME=${OS_} --build-arg ARCH=${ARCH_} --build-arg BINARY_NAME=$b "${workdir}"
 done

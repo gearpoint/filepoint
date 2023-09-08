@@ -6,12 +6,13 @@ services:
     depends_on:
       - kafka
     ports:
-     - "8001:8000"
+     - "${FILEPOINT_ADDR}:8000"
     build:
-      context: ..
+      context: .
       dockerfile: ./build/package/docker/Dockerfile
       args:
-        - BINARY=./cmd/filepoint/
+        - BINARY_NAME=filepoint
+        - ADDRESS=${FILEPOINT_ADDR}
     volumes:
       - ./config:/app/config
   zookeeper:

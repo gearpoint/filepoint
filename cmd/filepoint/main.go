@@ -11,6 +11,7 @@ import (
 	"github.com/gearpoint/filepoint/pkg/logger"
 	"github.com/gearpoint/filepoint/pkg/redis"
 	"github.com/gearpoint/filepoint/pkg/utils"
+	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	"go.uber.org/zap"
 )
@@ -31,7 +32,20 @@ func main() {
 
 	envType := utils.GetEnvironmentType()
 
-	logger.InitLogger(envType)
+	var ginReleaseMode string
+	var loggerType logger.Mode
+
+	switch envType {
+	case utils.Development:
+		ginReleaseMode = gin.DebugMode
+		loggerType = logger.DevelopmentMode
+	case utils.Production:
+		gin.SetMode(gin.ReleaseMode)
+		loggerType = logger.ProductionMode
+	}
+
+	logger.InitLogger(loggerType)
+
 	logger.Info("Starting Filepoint server...")
 
 	flag.StringVar(&configFile, "config", "./config/config-docker.yaml", "aaa")
@@ -79,7 +93,7 @@ func main() {
 		zap.String("version", version),
 	)
 
-	s := server.NewServer(cfg, redisClient, s3Client)
+	s := server.NewServer(cfg, redisClient, s3Client, ginReleaseMode)
 	if err = s.Run(); err != nil {
 		logger.Fatal("Error starting server")
 	}

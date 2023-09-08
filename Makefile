@@ -26,7 +26,7 @@ prepare:
 
 .PHONY: build-local
 build-local: prepare
-	scripts/build-binary.sh ${VERSION}
+	scripts/build-binary.sh ${VERSION} ${TAGS}
 
 .PHONY: build-image
 build-image:

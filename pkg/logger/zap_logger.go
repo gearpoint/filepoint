@@ -5,29 +5,38 @@ import (
 	"log"
 	"os"
 
-	"github.com/gearpoint/filepoint/pkg/utils"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
 
-// loggerKeyType is used to identify the
+// loggerKeyType is used to prevent collisions in the logger config.
 type loggerKeyType int
 
 const loggerKey loggerKeyType = iota
+
+// Mode is used to set the logger mode.
+type Mode string
+
+const (
+	// DevelopmentMode indicates logger mode is development.
+	DevelopmentMode Mode = "development"
+	// ProductionMode indicates logger mode is development.
+	ProductionMode Mode = "production"
+)
 
 // The zap.Logger variable.
 var Logger *zap.Logger
 
 // InitLogger configures and initializes the zap logger.
-func InitLogger(envType utils.EnvironmentType) {
+func InitLogger(mode Mode) {
 	var err error
 
-	switch envType {
-	case utils.Development:
+	switch mode {
+	case DevelopmentMode:
 		config := zap.NewDevelopmentConfig()
 		config.EncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
 		Logger, err = config.Build()
-	case utils.Production:
+	case ProductionMode:
 		Logger, err = zap.NewProduction()
 	}
 
