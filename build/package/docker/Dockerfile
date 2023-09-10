@@ -34,6 +34,7 @@ RUN echo ${GOOS}/${GOARCH} > scripts/plataforms \
 FROM alpine:latest
 
 RUN apk --no-cache add ca-certificates
+RUN apk add libc6-compat
 
 LABEL maintainer="Gearpoint" \
  contributor="Luan Baggio <luanbaggio0@gmail.com>"
@@ -41,7 +42,6 @@ LABEL maintainer="Gearpoint" \
 ARG OS_NAME
 ARG ARCH
 ARG BINARY_NAME
-ARG ADDRESS
 
 ENV GOOS=${OS_NAME:-linux} \
     GOARCH=${ARCH:-amd64} \
@@ -49,11 +49,10 @@ ENV GOOS=${OS_NAME:-linux} \
 
 WORKDIR /app
 
-COPY --from=builder /code/target/bin/${GOOS}_${GOARCH}/${APP_NAME}_*_${GOOS}_${GOARCH} ./${APP_NAME}
+COPY .env .env
 COPY ./config/config-docker.yaml ./config/config-docker.yaml
+COPY --from=builder /code/target/bin/${GOOS}_${GOARCH}/${APP_NAME}_1.0.0-SNAPSHOT_${GOOS}_${GOARCH} ./${APP_NAME}
 
 RUN chmod +x ./${APP_NAME}
 
-EXPOSE ${ADDRESS}
-
-ENTRYPOINT ./${APP_NAME} -config ./config/config-docker.yaml
+CMD ./${APP_NAME} -config ./config/config-docker.yaml
