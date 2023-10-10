@@ -1,4 +1,31 @@
 basePath: /v1
+definitions:
+  http_utils.RestError:
+    properties:
+      description:
+        items:
+          type: string
+        type: array
+      message:
+        type: string
+    type: object
+  views.GetSignedURLResponse:
+    properties:
+      expires:
+        type: string
+      labels:
+        items:
+          type: string
+        type: array
+      metadata:
+        additionalProperties:
+          type: string
+        type: object
+      temporary:
+        type: boolean
+      url:
+        type: string
+    type: object
 info:
   contact:
     email: luanbaggio0@gmail.com
@@ -21,14 +48,168 @@ paths:
       tags:
       - HealthCheck
   /upload:
+    delete:
+      description: Deletes the file or whole prefix
+      parameters:
+      - description: File prefix
+        in: query
+        name: prefix
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-Id:
+              description: Request ID (UUID)
+              type: string
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          headers:
+            X-Request-Id:
+              description: Request ID (UUID)
+              type: string
+          schema:
+            $ref: '#/definitions/http_utils.RestError'
+        "500":
+          description: Internal Server Error
+          headers:
+            X-Request-Id:
+              description: Request ID (UUID)
+              type: string
+      summary: Delete file or prefix
+      tags:
+      - Upload
+    get:
+      description: Returns the file signed URL
+      parameters:
+      - description: File prefix
+        in: query
+        name: prefix
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-Id:
+              description: Request ID (UUID)
+              type: string
+          schema:
+            $ref: '#/definitions/views.GetSignedURLResponse'
+        "400":
+          description: Bad Request
+          headers:
+            X-Request-Id:
+              description: Request ID (UUID)
+              type: string
+          schema:
+            $ref: '#/definitions/http_utils.RestError'
+        "500":
+          description: Internal Server Error
+          headers:
+            X-Request-Id:
+              description: Request ID (UUID)
+              type: string
+      summary: Get file URL
+      tags:
+      - Upload
     post:
       consumes:
-      - application/json
+      - multipart/form-data
       description: Saves a file in the storage service
+      parameters:
+      - description: User Identifier
+        in: formData
+        name: userId
+        required: true
+        type: string
+      - description: File upload author
+        in: formData
+        name: author
+        required: true
+        type: string
+      - description: File title
+        in: formData
+        name: title
+        required: true
+        type: string
+      - description: File to be uploaded
+        in: formData
+        name: content
+        required: true
+        type: file
+      produces:
+      - application/json
       responses:
-        "204":
-          description: No Content
+        "202":
+          description: Accepted
+          headers:
+            Webhook-Request-Body:
+              description: views.WebhookPayload{Id:"X-Request-Id", Success:true, Location:"{location}",
+                Labels:[]string{}, Error:""}
+              type: object
+            X-Request-Id:
+              description: Request ID (UUID)
+              type: string
+        "400":
+          description: Bad Request
+          headers:
+            X-Request-Id:
+              description: Request ID (UUID)
+              type: string
+          schema:
+            $ref: '#/definitions/http_utils.RestError'
+        "500":
+          description: Internal Server Error
+          headers:
+            X-Request-Id:
+              description: Request ID (UUID)
+              type: string
       summary: File upload
+      tags:
+      - Upload
+  /upload/list:
+    get:
+      description: Returns the files signed URLs
+      parameters:
+      - description: Folder prefix
+        in: query
+        name: prefix
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-Id:
+              description: Request ID (UUID)
+              type: string
+          schema:
+            $ref: '#/definitions/views.GetSignedURLResponse'
+        "400":
+          description: Bad Request
+          headers:
+            X-Request-Id:
+              description: Request ID (UUID)
+              type: string
+          schema:
+            $ref: '#/definitions/http_utils.RestError'
+        "500":
+          description: Internal Server Error
+          headers:
+            X-Request-Id:
+              description: Request ID (UUID)
+              type: string
+      summary: List files URL
       tags:
       - Upload
 swagger: "2.0"

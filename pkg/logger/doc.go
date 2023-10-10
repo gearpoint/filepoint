@@ -1,2 +1,2 @@
-// package logger configures and distributes the app logger.
+// Package logger configures and distributes the app logger.
 package logger

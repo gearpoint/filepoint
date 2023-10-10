@@ -1,2 +1,2 @@
-// package http contains the HTTP common implementations.
-package http
+// Package http_utils contains the HTTP common implementations.
+package http_utils

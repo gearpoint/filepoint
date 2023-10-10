@@ -1,17 +1,20 @@
+// Filepoint is the Gearpoint's file manager service. It's built for performance.
 package main
 
 import (
+	"context"
 	"flag"
+	"log"
 	"os"
 
 	"github.com/gearpoint/filepoint/api"
 	config "github.com/gearpoint/filepoint/config"
 	"github.com/gearpoint/filepoint/internal/server"
-	"github.com/gearpoint/filepoint/pkg/aws"
+	"github.com/gearpoint/filepoint/pkg/aws_repository"
 	"github.com/gearpoint/filepoint/pkg/logger"
 	"github.com/gearpoint/filepoint/pkg/redis"
 	"github.com/gearpoint/filepoint/pkg/utils"
-	"github.com/gin-gonic/gin"
+	"github.com/gearpoint/filepoint/pkg/watermill"
 	"github.com/joho/godotenv"
 	"go.uber.org/zap"
 )
@@ -31,55 +34,56 @@ func main() {
 	godotenv.Load()
 
 	envType := utils.GetEnvironmentType()
-
-	var ginReleaseMode string
-	var loggerType logger.Mode
-
 	switch envType {
 	case utils.Development:
-		ginReleaseMode = gin.DebugMode
-		loggerType = logger.DevelopmentMode
+		logger.InitLogger(logger.DevelopmentMode)
 	case utils.Production:
-		gin.SetMode(gin.ReleaseMode)
-		loggerType = logger.ProductionMode
+		logger.InitLogger(logger.ProductionMode)
+	default:
+		log.Fatal("error initializing logger")
 	}
 
-	logger.InitLogger(loggerType)
+	logger.Info("starting Filepoint server...")
 
-	logger.Info("Starting Filepoint server...")
-
-	flag.StringVar(&configFile, "config", "./config/config-docker.yaml", "aaa")
+	flag.StringVar(&configFile, "config", "./config/config-local.yaml", "aaa")
 	flag.Parse()
 
 	viperConfig, err := config.LoadConfig(configFile)
 	if err != nil {
-		logger.Fatal("Error initializing config",
+		logger.Fatal("error initializing config",
 			zap.Error(err),
 		)
 	}
 
 	cfg, err := config.ParseConfig(viperConfig)
 	if err != nil {
-		logger.Fatal("Error getting config",
+		logger.Fatal("error getting config",
 			zap.Error(err),
 		)
 	}
 
-	redisClient := redis.NewRedisClient(&cfg.Redis)
-	defer redisClient.Close()
-	logger.Info("Redis connected",
-		zap.String("address", cfg.Redis.RedisAddr),
-	)
-
-	s3Client, err := aws.NewAWSClient(&cfg.AWS)
+	publisher, err := watermill.NewKafkaPublisher(&cfg.KafkaConfig)
 	if err != nil {
-		logger.Fatal("AWS Client init error",
+		logger.Fatal("error initializing Kafka publisher",
 			zap.Error(err),
 		)
 	}
-	logger.Info("AWS S3 connected",
-		zap.String("endpoint", cfg.AWS.Endpoint),
+	defer publisher.Close()
+	logger.Info("Kafka publisher connected",
+		zap.Any("brokers", cfg.KafkaConfig.Brokers),
 	)
+
+	awsRepository, err := aws_repository.NewAWSRepository(&cfg.AWSConfig, context.Background())
+	if err != nil {
+		logger.Fatal("cannot initialize storage client",
+			zap.Error(err),
+		)
+	}
+	logger.Info("AWS connected")
+
+	redisRepository := redis.NewRedisRepository(&cfg.RedisConfig)
+	defer redisRepository.Client.Close()
+	logger.Info("Redis connected")
 
 	var version string
 
@@ -93,8 +97,14 @@ func main() {
 		zap.String("version", version),
 	)
 
-	s := server.NewServer(cfg, redisClient, s3Client, ginReleaseMode)
+	s := server.NewServer(server.ServerConfig{
+		Config:          &cfg.Server,
+		Routes:          cfg.Routes,
+		Publisher:       publisher,
+		AWSRepository:   awsRepository,
+		RedisRepository: redisRepository,
+	})
 	if err = s.Run(); err != nil {
-		logger.Fatal("Error starting server")
+		logger.Fatal("error starting server")
 	}
 }

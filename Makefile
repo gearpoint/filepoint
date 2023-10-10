@@ -12,6 +12,10 @@ default: clean test build-local
 run:
 	go run cmd/filepoint/main.go
 
+.PHONY: run-webhooks-producer
+run-webhooks-sender:
+	go run cmd/filepoint-webhooks-sender/main.go
+
 .PHONY: deps
 deps:
 	go mod download
@@ -39,8 +43,7 @@ test: prepare
 
 .PHONY: integration-test
 integration-test: prepare
-	export GIN_MODE=debug \
-	&& go test -tags integration -outputdir=target/tests -coverprofile=coverage.out -v  ./... \
+	go test -tags integration -outputdir=target/tests -coverprofile=coverage.out -v  ./... \
 	&& go tool cover -func target/tests/coverage.out
 
 .PHONY: generate

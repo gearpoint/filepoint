@@ -40,19 +40,289 @@ const docTemplate = `{
             }
         },
         "/upload": {
+            "get": {
+                "description": "Returns the file signed URL",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Upload"
+                ],
+                "summary": "Get file URL",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "File prefix",
+                        "name": "prefix",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/views.GetSignedURLResponse"
+                        },
+                        "headers": {
+                            "X-Request-Id": {
+                                "type": "string",
+                                "description": "Request ID (UUID)"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/http_utils.RestError"
+                        },
+                        "headers": {
+                            "X-Request-Id": {
+                                "type": "string",
+                                "description": "Request ID (UUID)"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "headers": {
+                            "X-Request-Id": {
+                                "type": "string",
+                                "description": "Request ID (UUID)"
+                            }
+                        }
+                    }
+                }
+            },
             "post": {
                 "description": "Saves a file in the storage service",
                 "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "Upload"
                 ],
                 "summary": "File upload",
-                "responses": {
-                    "204": {
-                        "description": "No Content"
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "User Identifier",
+                        "name": "userId",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "File upload author",
+                        "name": "author",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "File title",
+                        "name": "title",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "file",
+                        "description": "File to be uploaded",
+                        "name": "content",
+                        "in": "formData",
+                        "required": true
                     }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "Accepted",
+                        "headers": {
+                            "Webhook-Request-Body": {
+                                "type": "object",
+                                "description": "views.WebhookPayload{Id:\"X-Request-Id\", Success:true, Location:\"{location}\", Labels:[]string{}, Error:\"\"}"
+                            },
+                            "X-Request-Id": {
+                                "type": "string",
+                                "description": "Request ID (UUID)"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/http_utils.RestError"
+                        },
+                        "headers": {
+                            "X-Request-Id": {
+                                "type": "string",
+                                "description": "Request ID (UUID)"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "headers": {
+                            "X-Request-Id": {
+                                "type": "string",
+                                "description": "Request ID (UUID)"
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "description": "Deletes the file or whole prefix",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Upload"
+                ],
+                "summary": "Delete file or prefix",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "File prefix",
+                        "name": "prefix",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "headers": {
+                            "X-Request-Id": {
+                                "type": "string",
+                                "description": "Request ID (UUID)"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/http_utils.RestError"
+                        },
+                        "headers": {
+                            "X-Request-Id": {
+                                "type": "string",
+                                "description": "Request ID (UUID)"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "headers": {
+                            "X-Request-Id": {
+                                "type": "string",
+                                "description": "Request ID (UUID)"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/upload/list": {
+            "get": {
+                "description": "Returns the files signed URLs",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Upload"
+                ],
+                "summary": "List files URL",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Folder prefix",
+                        "name": "prefix",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/views.GetSignedURLResponse"
+                        },
+                        "headers": {
+                            "X-Request-Id": {
+                                "type": "string",
+                                "description": "Request ID (UUID)"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/http_utils.RestError"
+                        },
+                        "headers": {
+                            "X-Request-Id": {
+                                "type": "string",
+                                "description": "Request ID (UUID)"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "headers": {
+                            "X-Request-Id": {
+                                "type": "string",
+                                "description": "Request ID (UUID)"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "http_utils.RestError": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
+        "views.GetSignedURLResponse": {
+            "type": "object",
+            "properties": {
+                "expires": {
+                    "type": "string"
+                },
+                "labels": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "metadata": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "temporary": {
+                    "type": "boolean"
+                },
+                "url": {
+                    "type": "string"
                 }
             }
         }

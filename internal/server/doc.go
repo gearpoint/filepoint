@@ -1,2 +1,2 @@
-// package server starts the API server.
+// Package server starts the API server.
 package server

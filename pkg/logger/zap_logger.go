@@ -27,6 +27,12 @@ const (
 // The zap.Logger variable.
 var Logger *zap.Logger
 
+func init() {
+	if Logger == nil {
+		InitLogger(DevelopmentMode)
+	}
+}
+
 // InitLogger configures and initializes the zap logger.
 func InitLogger(mode Mode) {
 	var err error
@@ -40,30 +46,30 @@ func InitLogger(mode Mode) {
 		Logger, err = zap.NewProduction()
 	}
 
-	Logger.WithOptions(
+	Logger = Logger.WithOptions(
 		zap.Fields(zap.Int("pid", os.Getpid())),
 	)
 
 	if Logger == nil || err != nil {
-		log.Fatal("Can't initialize zap logger: ", err)
+		log.Fatal("can't initialize zap logger: ", err)
 	}
 
 	defer Logger.Sync()
 }
 
-// NewContext creates a new context with the logger.
+// New context creates a new context with logger.
 func NewContext(ctx context.Context, fields ...zap.Field) context.Context {
 	return context.WithValue(ctx, loggerKey, WithContext(ctx).With(fields...))
 }
 
-// WithContext returns the logger with context inserted.
+// WithContext inserts context in the logger.
 func WithContext(ctx context.Context) *zap.Logger {
 	if ctx == nil {
 		return Logger
 	}
 
-	if ctxLogger, ok := ctx.Value(loggerKey).(zap.Logger); ok {
-		return &ctxLogger
+	if ctxLogger, ok := ctx.Value(loggerKey).(*zap.Logger); ok {
+		return ctxLogger
 	}
 
 	return Logger

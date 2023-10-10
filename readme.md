@@ -2,33 +2,38 @@
 
 Filepoint is the Gearpoint's file manager service. It's built for performance.
 
-## Useful Links
+## Tech Stack
 
 - [Golang](https://go.dev/)
 - [Gin Framework](https://gin-gonic.com/)
-- [Zap Logger](https://github.com/uber-go/zap)
-- [Zap Logger Gin Middleware](https://github.com/gin-contrib/zap)
-- [Swagger](https://swagger.io/)
-- [Gin Swagger](https://github.com/swaggo/gin-swagger)
-- [Apache Kafka](https://kafka.apache.org/get-started)
-- [Watermill](https://github.com/ThreeDotsLabs/watermill)
-- [OpenTelemetry](https://opentelemetry.io/)
-- [OpenTelemetry for Go](https://opentelemetry.io/docs/instrumentation/go/)
-- [Redis](https://redis.io/)
-- [Redis Go Client](https://redis.io/docs/clients/go/)
-- [AWS S3](https://docs.aws.amazon.com/s3/)
-- [AWS SDK for Go](https://docs.aws.amazon.com/sdk-for-go/)
+- **Logs and tracing**
+    - [Zap Logger](https://github.com/uber-go/zap)
+    - [Zap Logger Gin Middleware](https://github.com/gin-contrib/zap)
+    - [OpenTelemetry](https://opentelemetry.io/)
+    - [OpenTelemetry for Go](https://opentelemetry.io/docs/instrumentation/go/)
+- **Pub/Sub and Kafka**
+    - [Apache Kafka](https://kafka.apache.org/get-started)
+    - [Sarama Apache Kafka Go Library](https://github.com/IBM/sarama)
+    - [Watermill](https://github.com/ThreeDotsLabs/watermill)
+    - [Watermill Kafka Pub/Sub Implementation](https://github.com/ThreeDotsLabs/watermill-kafka)
+    - [Watermill Http Pub/Sub Implementation](https://github.com/ThreeDotsLabs/watermill-http)
+- **Caching**
+    - [Redis](https://redis.io/)
+    - [Redis client for Go](https://github.com/redis/go-redis)
+- **Docs**
+    - [Swagger](https://swagger.io/)
+    - [Gin Swagger](https://github.com/swaggo/gin-swagger)
+- **AWS**
+    - [AWS S3](https://docs.aws.amazon.com/s3/)
+    - [AWS Cloudfront](https://aws.amazon.com/cloudfront/)
+    - [AWS Rekognition](https://aws.amazon.com/rekognition/)
+- **File Handle**
+    - [libvips](https://github.com/libvips/libvips)
+    - [bimg](https://github.com/h2non/bimg)
 
-## Tech Stack
+## The project
 
-- Golang
-- Gin Framework REST API
-    - Zap Logger
-    - Gin Swagger
-    - Watermill
-- Apache Kafka for queueu proccess
-- AWS S3 storage service
-- Event driven architecture
+![Project](./docs/Filepoint.drawio.png)
 
 ## Building and running
 
@@ -42,9 +47,12 @@ cp .env.example .env
 To run the project with go, use the following command:
 
 ```sh
-go run cmd/filepoint/main.go -config ./config/config-local.yaml
-```
+# Filepoint API
+make run
 
+# Filepoint webhooks provider
+make run-webhooks-provider
+```
 
 ### The binary
 
@@ -69,3 +77,11 @@ Just run:
 ```sh
 docker compose build && docker compose up
 ```
+
+## Signing Cloudfront URLs
+
+To sign the Cloudfront URLs, you must provide a valid private key in PEM format. The public key has to be registered in the Cloudfront configuration as well.
+
+You can check it in the [docs](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/private-content-trusted-signers.html).
+
+The key must be in the ```.aws``` folder.

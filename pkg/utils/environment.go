@@ -8,6 +8,9 @@ const (
 
 	// The AddrKey defines the key that contains the app address.
 	AddrKey string = "FILEPOINT_ADDR"
+
+	// The CloudfrontKeyId defines the key that contains the Cloudfront key ID.
+	CloudfrontKeyId string = "AWS_CLOUDFRONT_KEY_ID"
 )
 
 // The EnvironmentType defines the app environment.

@@ -1,39 +1,15 @@
-package http
+package http_utils
 
 import (
-	"context"
-	"encoding/json"
-	"io"
 	"mime/multipart"
-	"net/http"
-	"time"
 
-	"github.com/gearpoint/filepoint/pkg/utils"
 	"github.com/gin-contrib/requestid"
 	"github.com/gin-gonic/gin"
-	"github.com/pkg/errors"
-
-	"github.com/AleksK1NG/api-mc/pkg/sanitize"
 )
 
-// GetRequestID gets the request identifier from gin context.
-func GetRequestID(c *gin.Context) string {
-	return requestid.Get(c)
-}
-
-// ReqIDCtxKey is a key used for the Request ID in context.
-type ReqIDCtxKey struct{}
-
-// GetCtxWithReqID gets the context with timeout and request id from gin context.
-func GetCtxWithReqID(c *gin.Context) (context.Context, context.CancelFunc) {
-	ctx, cancel := context.WithTimeout(c.Request.Context(), time.Second*15)
-	ctx = context.WithValue(ctx, ReqIDCtxKey{}, GetRequestID(c))
-	return ctx, cancel
-}
-
-// GetRequestCtx gets the context with request id.
-func GetRequestCtx(c *gin.Context) context.Context {
-	return context.WithValue(c.Request.Context(), ReqIDCtxKey{}, GetRequestID(c))
+// GetRequestId gets the request identifier from gin context.
+func GetRequestId(ctx *gin.Context) string {
+	return requestid.Get(ctx)
 }
 
 // GetConfigPath gets the config path for local or docker.
@@ -46,51 +22,24 @@ func GetConfigPath(configPath string) string {
 }
 
 // GetIPAddress gets the user ip address.
-func GetIPAddress(c *gin.Context) string {
-	return c.Request.RemoteAddr
+func GetIPAddress(ctx *gin.Context) string {
+	return ctx.Request.RemoteAddr
 }
 
-// ReadRequest gets the request body and validates it.
+// ReadRequest gets the request body.
 func ReadRequest(ctx *gin.Context, request interface{}) error {
 	if err := ctx.Bind(request); err != nil {
 		return err
 	}
-	return utils.Validate.StructCtx(ctx.Request.Context(), request)
+	return nil
 }
 
-// ReadImage reads an image and return a FileHeader instance..
-func ReadImage(ctx *gin.Context, field string) (*multipart.FileHeader, error) {
-	image, err := ctx.FormFile(field)
+// ReadRequestFile reads a file from request and returns a FileHeader instance.
+func ReadRequestFile(ctx *gin.Context, field string) (*multipart.FileHeader, error) {
+	file, err := ctx.FormFile(field)
 	if err != nil {
-		return nil, errors.WithMessage(err, "ctx.FormFile")
-	}
-
-	// Check content type of image
-	if err = utils.CheckImageContentType(image); err != nil {
 		return nil, err
 	}
 
-	return image, nil
-}
-
-// SanitizeRequest sanitizes and validates the request.
-func SanitizeRequest(ctx *gin.Context, request interface{}) error {
-	body, err := io.ReadAll(ctx.Request.Body)
-	if err != nil {
-		return err
-	}
-	defer ctx.Request.Body.Close()
-
-	sanBody, err := sanitize.SanitizeJSON(body)
-	if err != nil {
-		ctx.Writer.WriteHeader(http.StatusBadRequest)
-
-		return err
-	}
-
-	if err = json.Unmarshal(sanBody, request); err != nil {
-		return err
-	}
-
-	return utils.Validate.StructCtx(ctx.Request.Context(), request)
+	return file, nil
 }

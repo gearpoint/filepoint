@@ -15,7 +15,7 @@ do
   GOARCH=${split[1]}
   binary_platform_dir=${binary_dir}/${GOOS}_${GOARCH}
 
-  go build ${tags} -ldflags "-X 'main.Version=${version}'" -trimpath -o ${binary_platform_dir} ${workdir}/...
+  go build -ldflags "-X 'main.Version=${version}'" ${tags} -trimpath -o ${binary_platform_dir} ${workdir}/...
 done
 
 for arch in ${archs}
@@ -37,4 +37,3 @@ do
     mv ${binary_platform_dir}/${binary_name} ${output_name}
  done
 done
-

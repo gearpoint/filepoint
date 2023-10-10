@@ -8,12 +8,19 @@ import (
 	"github.com/spf13/viper"
 )
 
+type Route string
+
+const (
+	Upload Route = "upload"
+)
+
 // Config is the app main config struct.
 type Config struct {
-	Server ServerConfig
-	AWS    AWSConfig
-	Kafka  KafkaConfig
-	Redis  RedisConfig
+	Server      ServerConfig
+	Routes      Routes
+	AWSConfig   AWSConfig
+	KafkaConfig KafkaConfig
+	RedisConfig RedisConfig
 }
 
 // ServerConfig is the server configuration struct.
@@ -26,31 +33,40 @@ type ServerConfig struct {
 	Debug             bool
 }
 
-// AWSConfig is the Amazon Web Services configuration.
+// Route config is the routes configuration.
+type RouteConfig struct {
+	Topic string
+}
+
+// Routes defines the available routes.
+type Routes map[Route]RouteConfig
+
+// AWSConfig config is the AWS configuration.
 type AWSConfig struct {
-	Endpoint  string
-	AccessKey string
-	SecretKey string
-	UseSSL    bool
+	Bucket             string
+	Region             string
+	CloudfrontDist     string
+	CloudfrontKeyId    string
+	VideoLabelingTopic string
+	RekognitionRole    string
 }
 
-// KafkaConfig is the Kafka configuration.
+// KafkaConfig is the Kafka producer configuration.
 type KafkaConfig struct {
-	Brokers []string
-	Topics  []string
+	Brokers           []string
+	MessagesPerSecond int64
+	MaxMessageBytes   int
+	MaxRetries        int
 }
 
-// RedisConfig is the Redis configuration.
+// RedisConfig config is the Redis configuration.
 type RedisConfig struct {
-	RedisAddr      string
-	RedisPassword  string
-	RedisDB        string
-	RedisDefaultdb string
-	MinIdleConns   int
-	PoolSize       int
-	PoolTimeout    int
-	Password       string
-	DB             int
+	Addr         string
+	MinIdleConns int
+	PoolSize     int
+	PoolTimeout  int
+	Username     string
+	Password     string
 }
 
 // LoadConfig loads file from given path.
@@ -58,7 +74,9 @@ func LoadConfig(path string) (*viper.Viper, error) {
 	v := viper.New()
 	v.SetConfigFile(path)
 	v.AddConfigPath(".")
+
 	v.SetDefault("Server.Addr", utils.GetEnv(utils.AddrKey))
+	v.SetDefault("AWSConfig.CloudfrontKeyId", utils.GetEnv(utils.CloudfrontKeyId))
 
 	if err := v.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); ok {

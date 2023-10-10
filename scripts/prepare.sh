@@ -1,8 +1,11 @@
 #!/bin/bash
 
 workdir="$(pwd)"
-binary_dir="${workdir}/target/bin"
+target="${workdir}/target"
+binary_dir="${target}/bin"
 archs=`cat ${workdir}/scripts/platforms`
+
+rm -rf ${target}
 
 for arch in ${archs}
 do
@@ -14,4 +17,4 @@ do
   (mkdir -p ${binary_platform_dir} >> /dev/null 2>&1 || true)
 done
 
-(mkdir -p ${workdir}/target/tests >> /dev/null 2>&1 || true)
+(mkdir -p ${target}/tests >> /dev/null 2>&1 || true)

@@ -3,27 +3,30 @@ Server:
   WriteTimeout: 10
   SSL: true
   CtxDefaultTimeout: 12
-  Debug: false
+  Debug: true
 
-Aws:
-  Endpoint: 127.0.0.1:9000
-  AccessKey: aws
-  SecretKey: 123
-  UseSSL: false
+Routes:
+  upload:
+    Topic: "filepoint.upload.queuing"
 
-Kafka:
+AWSConfig:
+  Bucket: "filepoint-us"
+  Region: "us-east-1"
+  CloudfrontDist: "https://d343c6r30h3w2g.cloudfront.net"
+  VideoLabelingTopic: "arn:aws:sns:us-east-1:526264782134:filepoint-video-labeling"
+  RekognitionRole: "arn:aws:iam::526264782134:role/filepoint-rekognition-access"
+
+KafkaConfig:
   Brokers:
-    - 'broker1'
-  Topics:
-    - 'topic1'
+    - "localhost:9094"
+  MessagesPerSecond: 100
+  MaxMessageBytes: 1048576
+  MaxRetries: 10
 
-Redis:
-  RedisAddr: redis:6379
-  RedisPassword:
-  RedisDb: 0
-  RedisDefaultdb: 0
+RedisConfig:
+  Addr: "localhost:6379"
   MinIdleConns: 200
   PoolSize: 12000
   PoolTimeout: 240
+  Username: ""
   Password: ""
-  DB: 0

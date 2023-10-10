@@ -1,2 +1,2 @@
-// package views contains the structured data representation.
+// Package views contains the structured data representation.
 package views
