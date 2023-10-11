@@ -26,6 +26,13 @@ definitions:
       url:
         type: string
     type: object
+  views.ListObjectsRequest:
+    properties:
+      prefixes:
+        items:
+          type: string
+        type: array
+    type: object
 info:
   contact:
     email: luanbaggio0@gmail.com
@@ -49,7 +56,7 @@ paths:
       - HealthCheck
   /upload:
     delete:
-      description: Deletes the file or whole prefix
+      description: Deletes the file
       parameters:
       - description: File prefix
         in: query
@@ -81,7 +88,7 @@ paths:
             X-Request-Id:
               description: Request ID (UUID)
               type: string
-      summary: Delete file or prefix
+      summary: Delete file
       tags:
       - Upload
     get:
@@ -175,7 +182,44 @@ paths:
       summary: File upload
       tags:
       - Upload
-  /upload/list:
+  /upload/all:
+    delete:
+      description: Deletes all files from prefix
+      parameters:
+      - description: File prefix
+        in: query
+        name: prefix
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-Id:
+              description: Request ID (UUID)
+              type: string
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          headers:
+            X-Request-Id:
+              description: Request ID (UUID)
+              type: string
+          schema:
+            $ref: '#/definitions/http_utils.RestError'
+        "500":
+          description: Internal Server Error
+          headers:
+            X-Request-Id:
+              description: Request ID (UUID)
+              type: string
+      summary: Delete all
+      tags:
+      - Upload
+  /upload/folder:
     get:
       description: Returns the files signed URLs
       parameters:
@@ -194,7 +238,9 @@ paths:
               description: Request ID (UUID)
               type: string
           schema:
-            $ref: '#/definitions/views.GetSignedURLResponse'
+            items:
+              $ref: '#/definitions/views.GetSignedURLResponse'
+            type: array
         "400":
           description: Bad Request
           headers:
@@ -209,7 +255,49 @@ paths:
             X-Request-Id:
               description: Request ID (UUID)
               type: string
-      summary: List files URL
+      summary: List files URLs
+      tags:
+      - Upload
+  /upload/list:
+    post:
+      consumes:
+      - application/json
+      description: Returns the files signed URLs
+      parameters:
+      - description: prefixes
+        in: body
+        name: prefixes
+        required: true
+        schema:
+          $ref: '#/definitions/views.ListObjectsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-Id:
+              description: Request ID (UUID)
+              type: string
+          schema:
+            items:
+              $ref: '#/definitions/views.GetSignedURLResponse'
+            type: array
+        "400":
+          description: Bad Request
+          headers:
+            X-Request-Id:
+              description: Request ID (UUID)
+              type: string
+          schema:
+            $ref: '#/definitions/http_utils.RestError'
+        "500":
+          description: Internal Server Error
+          headers:
+            X-Request-Id:
+              description: Request ID (UUID)
+              type: string
+      summary: List files URLs
       tags:
       - Upload
 swagger: "2.0"

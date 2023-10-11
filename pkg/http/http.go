@@ -26,6 +26,14 @@ func GetIPAddress(ctx *gin.Context) string {
 	return ctx.Request.RemoteAddr
 }
 
+// ReadQueryParam gets the request body.
+func ReadQueryParam(ctx *gin.Context, request interface{}) error {
+	if err := ctx.Bind(request); err != nil {
+		return err
+	}
+	return nil
+}
+
 // ReadRequest gets the request body.
 func ReadRequest(ctx *gin.Context, request interface{}) error {
 	if err := ctx.Bind(request); err != nil {

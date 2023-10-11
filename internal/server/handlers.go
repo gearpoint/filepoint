@@ -35,8 +35,9 @@ func (s *Server) MapHandlers() error {
 		)
 
 		upload.GET("", uploadController.GetSignedURL)
-		upload.GET("/list", uploadController.ListObjects)
+		upload.GET("/folder", uploadController.ListFolder)
 		upload.POST("", uploadController.Upload)
+		upload.POST("/list", uploadController.ListObjects)
 		upload.DELETE("", uploadController.Delete)
 		upload.DELETE("/all", uploadController.DeleteAll)
 	}

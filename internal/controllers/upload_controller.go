@@ -226,20 +226,20 @@ func (u *UploadController) GetSignedURL(c *gin.Context) {
 }
 
 // Upload godoc
-// @Summary List files URL
+// @Summary List files URLs
 // @Description Returns the files signed URLs
 // @Tags Upload
 // @Param prefix query string true "Folder prefix"
 // @Produce json
-// @Success 200 {object} views.GetSignedURLResponse
+// @Success 200 {object} []views.GetSignedURLResponse
 // @Failure 400 {object} http_utils.RestError
 // @Failure 500
 // @Header all {string} X-Request-Id "Request ID (UUID)"
-// @Router /upload/list [get]
-func (u *UploadController) ListObjects(c *gin.Context) {
+// @Router /upload/folder [get]
+func (u *UploadController) ListFolder(c *gin.Context) {
 	prefix := c.Request.URL.Query().Get("prefix")
 	if prefix == "" || !utils.CheckPrefixIsFolder(prefix) {
-		abortWithBadRequest(c, "the file prefix is required", "you must provide a valid file prefix")
+		abortWithBadRequest(c, "the folder prefix is required", "you must provide a valid folder prefix")
 		return
 	}
 
@@ -250,6 +250,32 @@ func (u *UploadController) ListObjects(c *gin.Context) {
 	}
 
 	response := u.listPrefixes(c, prefixes)
+
+	c.JSON(http.StatusOK, response)
+}
+
+// Upload godoc
+// @Summary List files URLs
+// @Description Returns the files signed URLs
+// @Tags Upload
+// @Accept json
+// @Param prefixes body views.ListObjectsRequest true "prefixes"
+// @Produce json
+// @Success 200 {object} []views.GetSignedURLResponse
+// @Failure 400 {object} http_utils.RestError
+// @Failure 500
+// @Header all {string} X-Request-Id "Request ID (UUID)"
+// @Router /upload/list [post]
+func (u *UploadController) ListObjects(c *gin.Context) {
+	request := &views.ListObjectsRequest{}
+	err := http_utils.ReadRequest(c, request)
+	logger.Debug("asd", zap.Any("asd", request))
+	if err != nil || request.Prefixes == nil {
+		abortWithBadRequest(c, "the prefixes are required", "you must provide valid prefixes")
+		return
+	}
+
+	response := u.listPrefixes(c, request.Prefixes)
 
 	c.JSON(http.StatusOK, response)
 }
@@ -352,7 +378,7 @@ func (u *UploadController) Delete(c *gin.Context) {
 // @Failure 400 {object} http_utils.RestError
 // @Failure 500
 // @Header all {string} X-Request-Id "Request ID (UUID)"
-// @Router /upload [delete]
+// @Router /upload/all [delete]
 func (u *UploadController) DeleteAll(c *gin.Context) {
 	prefix := c.Request.URL.Query().Get("prefix")
 	if prefix == "" || !utils.CheckPrefixIsFolder(prefix) {

@@ -17,3 +17,8 @@ type GetSignedURLResponse struct {
 	Expires   time.Time         `json:"expires"`
 	Temporary bool              `json:"temporary"`
 }
+
+// ListObjectsRequest is the request used in ListObjects calls.
+type ListObjectsRequest struct {
+	Prefixes []string `json:"prefixes"`
+}

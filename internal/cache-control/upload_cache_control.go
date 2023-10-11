@@ -3,10 +3,8 @@ package cache_control
 import (
 	"context"
 
-	"github.com/gearpoint/filepoint/pkg/logger"
 	"github.com/gearpoint/filepoint/pkg/redis"
 	"github.com/gearpoint/filepoint/pkg/utils"
-	"go.uber.org/zap"
 )
 
 // UploadCacheControl is the prefixes cache control type.
@@ -28,7 +26,6 @@ func (c *UploadCacheControl) RemoveFolderFromCache(ctx context.Context, prefixes
 	if prefixes != nil {
 		c.SignedURLCacheControl.DelMany(ctx, prefixes)
 	}
-	logger.Debug("asd", zap.Any("asd", prefixesKey))
 
 	c.PrefixesCacheControl.Del(ctx, prefixesKey)
 }

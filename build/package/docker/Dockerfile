@@ -40,6 +40,7 @@ ENV GOOS=${OS_NAME:-linux} \
 WORKDIR /app
 
 COPY .env .env
+COPY .aws .aws
 COPY ./config/config-docker.yaml ./config/config-docker.yaml
 COPY --from=builder /code/target/bin/${GOOS}_${GOARCH}/${APP_NAME}_1.0.0-SNAPSHOT_${GOOS}_${GOARCH} ./${APP_NAME}
 
