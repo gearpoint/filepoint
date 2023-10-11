@@ -19,8 +19,6 @@ const (
 	Key types.UploaderTypes = "image"
 	// defines the file quality.
 	imageQuality = 60
-	// the mime type that the image will be converted to.
-	convertedImageType = "image/png"
 )
 
 const (
@@ -92,8 +90,6 @@ func (u *ImageUploader) HandleFile(prefix string) (io.ReadCloser, error) {
 		return nil, err
 	}
 
-	u.Config.UploadView.ContentType = convertedImageType
-
 	reader := bytes.NewReader(image)
 	readCloser := io.NopCloser(reader)
 
@@ -102,14 +98,14 @@ func (u *ImageUploader) HandleFile(prefix string) (io.ReadCloser, error) {
 
 // handleImage proccess the image.
 func (u *ImageUploader) handleImage(buffer []byte) ([]byte, error) {
-	imgConvert := bimg.PNG
-	if bimg.DetermineImageType(buffer) == bimg.PNG {
+	imgConvert := bimg.JPEG
+	if bimg.DetermineImageType(buffer) == imgConvert {
 		imgConvert = 0
 	}
 
 	img, err := bimg.NewImage(buffer).Process(
 		bimg.Options{
-			Quality: 1,
+			Quality: 60,
 			Type:    imgConvert,
 			Speed:   8,
 		},
@@ -117,6 +113,13 @@ func (u *ImageUploader) handleImage(buffer []byte) ([]byte, error) {
 
 	if err != nil {
 		return nil, err
+	}
+
+	for contentType, ext := range ContentTypes {
+		if ext == bimg.ImageTypes[imgConvert] {
+			u.Config.UploadView.ContentType = contentType
+			break
+		}
 	}
 
 	return img, nil
