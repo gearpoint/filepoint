@@ -269,7 +269,6 @@ func (u *UploadController) ListFolder(c *gin.Context) {
 func (u *UploadController) ListObjects(c *gin.Context) {
 	request := &views.ListObjectsRequest{}
 	err := http_utils.ReadRequest(c, request)
-	logger.Debug("asd", zap.Any("asd", request))
 	if err != nil || request.Prefixes == nil {
 		abortWithBadRequest(c, "the prefixes are required", "you must provide valid prefixes")
 		return

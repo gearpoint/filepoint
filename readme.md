@@ -85,3 +85,28 @@ To sign the Cloudfront URLs, you must provide a valid private key in PEM format.
 You can check it in the [docs](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/private-content-trusted-signers.html).
 
 The key must be in the ```.aws``` folder.
+
+## Docker Hub
+
+Docker Hub is the world's largestlibrary and community for container images
+
+### Pulling
+
+To pull from Docker Hub, you must be authenticated in private repositories:
+
+```sh
+docker login
+docker pull gearpoint/filepoint
+docker pull gearpoint/filepoint-webhooks-sender
+```
+
+### Publishing
+
+To publish to Docker Hub, you must build, tag and push your images:
+
+```sh
+make build-image
+docker login
+make filepoint-publish-latest
+make webhooks-sender-publish-latest
+```

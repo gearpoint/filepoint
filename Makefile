@@ -12,7 +12,7 @@ default: clean test build-local
 run:
 	go run cmd/filepoint/main.go
 
-.PHONY: run-webhooks-producer
+.PHONY: run-webhooks-sender
 run-webhooks-sender:
 	go run cmd/filepoint-webhooks-sender/main.go
 
@@ -57,3 +57,23 @@ swagger:
 .PHONY: godoc
 godoc:
 	godoc -http=:6060
+
+DOCKER_REPO := "gearpoint"
+FILEPOINT := "filepoint"
+WEBHOOKS_SENDER := "filepoint-webhooks-sender"
+
+.PHONY: filepoint-tag-latest
+filepoint-tag-latest:
+	docker tag $(FILEPOINT) $(DOCKER_REPO)/$(FILEPOINT):latest
+
+.PHONY: filepoint-publish-latest
+filepoint-publish-latest: filepoint-tag-latest
+	docker push $(DOCKER_REPO)/$(FILEPOINT):latest
+
+.PHONY: webhooks-sender-tag-latest
+webhooks-sender-tag-latest:
+	docker tag $(WEBHOOKS_SENDER) $(DOCKER_REPO)/$(WEBHOOKS_SENDER):latest
+
+.PHONY: webhooks-sender-publish-latest
+webhooks-sender-publish-latest: webhooks-sender-tag-latest
+	docker push $(DOCKER_REPO)/$(WEBHOOKS_SENDER):latest
