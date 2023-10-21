@@ -113,12 +113,13 @@ func setupRouter(cfg *config.Config) {
 	for routeName, routeConfig := range cfg.Routes {
 		switch routeName {
 		case config.Upload:
-			upload := sender_handlers.NewUploadHandler(awsRepository, redisRepository)
+			webhookURL := cfg.Routes[routeName].WebhookURL
+			upload := sender_handlers.NewUploadHandler(awsRepository, redisRepository, webhookURL)
 			uploadHandler := router.AddHandler(
 				string(routeName),
 				routeConfig.Topic,
 				subscriber,
-				sender_handlers.UploadWebhook,
+				webhookURL,
 				publisher,
 				upload.ProccessUploadMessages(),
 			)

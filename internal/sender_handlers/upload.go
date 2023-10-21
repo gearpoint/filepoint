@@ -21,8 +21,6 @@ import (
 )
 
 const (
-	// The webhook URL
-	UploadWebhook = "https://webhook.site/64981a95-1cf0-47cd-ab9c-e13168ed075d"
 	// Filepoint get image route.
 	getSignedURLBase = "/v1/upload?prefix="
 )
@@ -30,14 +28,16 @@ const (
 type UploadHandler struct {
 	maxRetries         int
 	poisonQueueTopic   string
+	webhookURL         string
 	awsRepository      *aws_repository.AWSRepository
 	uploadCacheControl *cache_control.UploadCacheControl
 }
 
-func NewUploadHandler(awsRepository *aws_repository.AWSRepository, redisRepository *redis.RedisRepository) *UploadHandler {
+func NewUploadHandler(awsRepository *aws_repository.AWSRepository, redisRepository *redis.RedisRepository, webhookURL string) *UploadHandler {
 	return &UploadHandler{
 		maxRetries:         10,
 		poisonQueueTopic:   "upload_poison_queue",
+		webhookURL:         webhookURL,
 		awsRepository:      awsRepository,
 		uploadCacheControl: cache_control.NewUploadCacheControl(redisRepository),
 	}
@@ -160,14 +160,14 @@ func (h *UploadHandler) processUploadPoisonQueue(gochannel *gochannel.GoChannel,
 	go func(messages <-chan *message.Message) {
 		for msg := range messages {
 			logger.Info("sending error message to webhook...")
-			SendUploadErrorWebhook(msg.Context(), msg.UUID)
+			SendUploadErrorWebhook(msg.Context(), msg.UUID, h.webhookURL)
 			msg.Ack()
 		}
 	}(messages)
 }
 
 // SendUploadErrorWebhook calls the upload webhook with error message.
-func SendUploadErrorWebhook(ctx context.Context, id string) {
+func SendUploadErrorWebhook(ctx context.Context, id string, webhookURL string) {
 	httpPublisher, err := watermill.NewHttpPublisher()
 	if err != nil {
 		logger.WithContext(ctx).Error("error initializing http publisher", zap.Error(err))
@@ -189,7 +189,7 @@ func SendUploadErrorWebhook(ctx context.Context, id string) {
 
 	message := message.NewMessage(id, payload)
 
-	err = httpPublisher.Publish(UploadWebhook, message)
+	err = httpPublisher.Publish(webhookURL, message)
 	if err != nil {
 		logger.WithContext(ctx).Error("error sending http request", zap.Error(err))
 		return

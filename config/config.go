@@ -35,7 +35,8 @@ type ServerConfig struct {
 
 // Route config is the routes configuration.
 type RouteConfig struct {
-	Topic string
+	Topic      string
+	WebhookURL string
 }
 
 // Routes defines the available routes.

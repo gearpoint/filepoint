@@ -8,12 +8,13 @@ Server:
 Routes:
   upload:
     Topic: "filepoint.upload.queuing"
+    WebhookURL: "https://webhook.site/724155e8-f99f-41f9-a235-7ebff3740cee"
 
 AWSConfig:
   Bucket: "filepoint-us"
   Region: "us-east-1"
-  CloudfrontDist: "https://d343c6r30h3w2g.cloudfront.net"
-  VideoLabelingTopic: "arn:aws:sns:us-east-1:526264782134:filepoint-video-labeling"
+  CloudfrontDist: "https://d2srbzn4h1o9jv.cloudfront.net"
+  VideoLabelingTopic: "arn:aws:sns:sa-east-1:029272547936:filepoint-video-labeling"
   RekognitionRole: "arn:aws:iam::526264782134:role/filepoint-rekognition-access"
 
 KafkaConfig:

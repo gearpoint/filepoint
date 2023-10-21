@@ -33,6 +33,7 @@ const (
 // UploadConfig contains the upload controller config.
 type UploadConfig struct {
 	Topic           string
+	WebhookURL      string
 	Publisher       message.Publisher
 	AWSRepository   *aws_repository.AWSRepository
 	RedisRepository *redis.RedisRepository
@@ -41,6 +42,7 @@ type UploadConfig struct {
 // UploadController is the controller for the upload route methods.
 type UploadController struct {
 	topic         string
+	webhookURL    string
 	publisher     message.Publisher
 	awsRepository *aws_repository.AWSRepository
 	cacheControl  *cache_control.UploadCacheControl
@@ -50,6 +52,7 @@ type UploadController struct {
 func NewUploadController(cfg *UploadConfig) *UploadController {
 	return &UploadController{
 		topic:         cfg.Topic,
+		webhookURL:    cfg.WebhookURL,
 		publisher:     cfg.Publisher,
 		awsRepository: cfg.AWSRepository,
 		cacheControl:  cache_control.NewUploadCacheControl(cfg.RedisRepository),
@@ -150,14 +153,14 @@ func (u *UploadController) uploadWorker(eventType types.UploaderTypes, uploader 
 
 	if err != nil {
 		logger.WithContext(ctx).Error("error saving temp file", zap.Error(err))
-		sender_handlers.SendUploadErrorWebhook(ctx, cfg.UploadView.Id)
+		sender_handlers.SendUploadErrorWebhook(ctx, cfg.UploadView.Id, u.webhookURL)
 		return
 	}
 
 	payload, err := json.Marshal(cfg.UploadView)
 	if err != nil {
 		logger.WithContext(ctx).Error("cannot marshal message", zap.Error(err))
-		sender_handlers.SendUploadErrorWebhook(ctx, cfg.UploadView.Id)
+		sender_handlers.SendUploadErrorWebhook(ctx, cfg.UploadView.Id, u.webhookURL)
 		return
 	}
 
@@ -169,7 +172,7 @@ func (u *UploadController) uploadWorker(eventType types.UploaderTypes, uploader 
 	err = u.publisher.Publish(u.topic, message)
 	if err != nil {
 		logger.WithContext(ctx).Error("error publishing message", zap.Error(err))
-		sender_handlers.SendUploadErrorWebhook(ctx, cfg.UploadView.Id)
+		sender_handlers.SendUploadErrorWebhook(ctx, cfg.UploadView.Id, u.webhookURL)
 		return
 	}
 }
@@ -391,13 +394,15 @@ func (u *UploadController) DeleteAll(c *gin.Context) {
 		return
 	}
 
-	err = u.awsRepository.DeleteMany(prefixes)
-	if err != nil {
-		abortWithBadRequest(c, "error deleting files", err.Error())
-		return
-	}
+	if len(prefixes) > 0 {
+		err = u.awsRepository.DeleteMany(prefixes)
+		if err != nil {
+			abortWithBadRequest(c, "error deleting files", err.Error())
+			return
+		}
 
-	u.cacheControl.RemoveFolderFromCache(c, prefix, prefixes)
+		u.cacheControl.RemoveFolderFromCache(c, prefix, prefixes)
+	}
 
 	c.String(http.StatusOK, "OK")
 }
