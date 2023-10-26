@@ -58,9 +58,9 @@ swagger:
 godoc:
 	godoc -http=:6060
 
-DOCKER_REPO := "gearpoint"
-FILEPOINT := "filepoint"
-WEBHOOKS_SENDER := "filepoint-webhooks-sender"
+DOCKER_REPO = "gearpoint"
+FILEPOINT = "filepoint"
+WEBHOOKS_SENDER = "filepoint-webhooks-sender"
 
 .PHONY: filepoint-tag-latest
 filepoint-tag-latest:
