@@ -61,7 +61,7 @@ func NewUploadController(cfg *UploadConfig) *UploadController {
 
 // Upload godoc
 // @Summary File upload
-// @Description Saves a file in the storage service
+// @Description Saves a file in the storage service and sends webhook.
 // @Tags Upload
 // @Accept multipart/form-data
 // @Param userId formData string true "User Identifier"

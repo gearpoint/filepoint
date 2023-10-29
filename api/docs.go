@@ -95,7 +95,7 @@ const docTemplate = `{
                 }
             },
             "post": {
-                "description": "Saves a file in the storage service",
+                "description": "Saves a file in the storage service and sends webhook.",
                 "consumes": [
                     "multipart/form-data"
                 ],

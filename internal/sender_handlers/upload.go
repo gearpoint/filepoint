@@ -76,6 +76,8 @@ func (h *UploadHandler) ProccessUploadMessages() message.HandlerFunc {
 					return nil, err
 				}
 
+				msg.Ack()
+
 				return message.Messages{
 					message.NewMessage(uploadPubSub.Id, webhookPayload),
 				}, nil

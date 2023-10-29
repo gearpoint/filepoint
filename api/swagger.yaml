@@ -130,7 +130,7 @@ paths:
     post:
       consumes:
       - multipart/form-data
-      description: Saves a file in the storage service
+      description: Saves a file in the storage service and sends webhook.
       parameters:
       - description: User Identifier
         in: formData
