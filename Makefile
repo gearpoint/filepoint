@@ -61,10 +61,11 @@ godoc:
 DOCKER_REPO = "gearpoint"
 FILEPOINT = "filepoint"
 WEBHOOKS_SENDER = "filepoint-webhooks-sender"
+VERSION=1.0.0-SNAPSHOT
 
 .PHONY: filepoint-tag-latest
 filepoint-tag-latest:
-	docker tag $(FILEPOINT) $(DOCKER_REPO)/$(FILEPOINT):latest
+	docker tag $(FILEPOINT):$(VERSION) $(DOCKER_REPO)/$(FILEPOINT):latest
 
 .PHONY: filepoint-publish-latest
 filepoint-publish-latest: filepoint-tag-latest
@@ -72,7 +73,7 @@ filepoint-publish-latest: filepoint-tag-latest
 
 .PHONY: webhooks-sender-tag-latest
 webhooks-sender-tag-latest:
-	docker tag $(WEBHOOKS_SENDER) $(DOCKER_REPO)/$(WEBHOOKS_SENDER):latest
+	docker tag $(WEBHOOKS_SENDER):$(VERSION) $(DOCKER_REPO)/$(WEBHOOKS_SENDER):latest
 
 .PHONY: webhooks-sender-publish-latest
 webhooks-sender-publish-latest: webhooks-sender-tag-latest
