@@ -20,11 +20,6 @@ import (
 	"go.uber.org/zap"
 )
 
-const (
-	// Filepoint get image route.
-	getSignedURLBase = "/v1/upload?prefix="
-)
-
 type UploadHandler struct {
 	maxRetries         int
 	poisonQueueTopic   string
@@ -108,7 +103,7 @@ func (h *UploadHandler) handleUpload(msg *message.Message, uploaderType *types.T
 		return "", nil, err
 	}
 
-	location := getSignedURLBase + newS3Prefix
+	location := newS3Prefix
 	labels := uploader.UploaderType.GetLabels(newS3Prefix)
 	labels = append(labels, msg.Metadata.Get(views.EventType))
 

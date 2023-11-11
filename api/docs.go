@@ -118,15 +118,13 @@ const docTemplate = `{
                         "type": "string",
                         "description": "File upload author",
                         "name": "author",
-                        "in": "formData",
-                        "required": true
+                        "in": "formData"
                     },
                     {
                         "type": "string",
                         "description": "File title",
                         "name": "title",
-                        "in": "formData",
-                        "required": true
+                        "in": "formData"
                     },
                     {
                         "type": "file",

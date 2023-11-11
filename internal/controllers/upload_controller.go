@@ -65,8 +65,8 @@ func NewUploadController(cfg *UploadConfig) *UploadController {
 // @Tags Upload
 // @Accept multipart/form-data
 // @Param userId formData string true "User Identifier"
-// @Param author formData string true "File upload author"
-// @Param title formData string true "File title"
+// @Param author formData string false "File upload author"
+// @Param title formData string false "File title"
 // @Param content formData file true "File to be uploaded"
 // @Produce json
 // @Success 202

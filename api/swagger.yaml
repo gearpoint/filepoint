@@ -140,12 +140,10 @@ paths:
       - description: File upload author
         in: formData
         name: author
-        required: true
         type: string
       - description: File title
         in: formData
         name: title
-        required: true
         type: string
       - description: File to be uploaded
         in: formData
