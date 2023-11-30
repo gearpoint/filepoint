@@ -2,6 +2,7 @@ package redis
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/gearpoint/filepoint/config"
@@ -12,7 +13,8 @@ import (
 
 // RedisRepository is a wrapper for Redis.
 type RedisRepository struct {
-	Client *redis.Client
+	Client     *redis.Client
+	prefix_key string
 }
 
 // NewRedisRepository returns a new redis client.
@@ -27,15 +29,23 @@ func NewRedisRepository(redisConfig *config.RedisConfig) *RedisRepository {
 	})
 
 	return &RedisRepository{
-		Client: client,
+		Client:     client,
+		prefix_key: "filepoint",
 	}
 }
 
+func (r *RedisRepository) getKey(key *string) {
+	fmt_key := fmt.Sprintf("%s::%s", r.prefix_key, *key)
+	key = &fmt_key
+}
+
 func (r *RedisRepository) GetAny(ctx context.Context, key string) ([]byte, error) {
+	r.getKey(&key)
 	return r.Client.Get(ctx, key).Bytes()
 }
 
 func (r *RedisRepository) SetAny(ctx context.Context, key string, value []byte, duration time.Duration) {
+	r.getKey(&key)
 	err := r.Client.Set(ctx, key, value, duration).Err()
 	if err != nil {
 		logger.Warn("unable to save request in Redis", zap.Any("key", key), zap.Error(err))
@@ -43,13 +53,18 @@ func (r *RedisRepository) SetAny(ctx context.Context, key string, value []byte, 
 }
 
 func (r *RedisRepository) Del(ctx context.Context, key ...string) {
+	for _, k := range key {
+		r.getKey(&k)
+	}
 	r.Client.Del(ctx, key...)
 }
 
 func (r *RedisRepository) Exists(ctx context.Context, key string) bool {
+	r.getKey(&key)
 	return r.Client.Exists(ctx, key).Val() > 0
 }
 
 func (r *RedisRepository) GetCachedKeyDuration(ctx context.Context, key string) time.Duration {
+	r.getKey(&key)
 	return r.Client.TTL(ctx, key).Val()
 }

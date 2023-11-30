@@ -16,6 +16,7 @@ import (
 	"github.com/gearpoint/filepoint/pkg/aws_repository"
 	"github.com/gearpoint/filepoint/pkg/logger"
 	"github.com/gearpoint/filepoint/pkg/redis"
+	"github.com/gearpoint/filepoint/pkg/utils"
 	"github.com/gearpoint/filepoint/pkg/watermill"
 	"go.uber.org/zap"
 )
@@ -105,7 +106,10 @@ func (h *UploadHandler) handleUpload(msg *message.Message, uploaderType *types.T
 
 	location := newS3Prefix
 	labels := uploader.UploaderType.GetLabels(newS3Prefix)
-	labels = append(labels, msg.Metadata.Get(views.EventType))
+	labels = append(
+		labels,
+		utils.Title(msg.Metadata.Get(views.EventType)),
+	)
 
 	tagging := make(map[string]string, len(labels))
 	if len(labels) > 0 {
