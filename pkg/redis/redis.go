@@ -35,7 +35,7 @@ func NewRedisRepository(redisConfig *config.RedisConfig) *RedisRepository {
 }
 
 func (r *RedisRepository) getKey(key *string) {
-	fmt_key := fmt.Sprintf("%s::%s", r.prefix_key, *key)
+	fmt_key := fmt.Sprintf("%s:%s", r.prefix_key, *key)
 	key = &fmt_key
 }
 
