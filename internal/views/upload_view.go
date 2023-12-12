@@ -18,6 +18,9 @@ type GetSignedURLResponse struct {
 	Temporary bool              `json:"temporary"`
 }
 
+// ListSignedURLResponse is the response for many GetSignedURLResponse fields
+type ListSignedURLResponse map[string]*GetSignedURLResponse
+
 // ListObjectsRequest is the request used in ListObjects calls.
 type ListObjectsRequest struct {
 	Prefixes []string `json:"prefixes"`

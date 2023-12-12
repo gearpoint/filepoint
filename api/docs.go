@@ -307,7 +307,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/views.GetSignedURLResponse"
+                                "$ref": "#/definitions/views.ListSignedURLResponse"
                             }
                         },
                         "headers": {
@@ -371,7 +371,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/views.GetSignedURLResponse"
+                                "$ref": "#/definitions/views.ListSignedURLResponse"
                             }
                         },
                         "headers": {
@@ -456,6 +456,12 @@ const docTemplate = `{
                         "type": "string"
                     }
                 }
+            }
+        },
+        "views.ListSignedURLResponse": {
+            "type": "object",
+            "additionalProperties": {
+                "$ref": "#/definitions/views.GetSignedURLResponse"
             }
         }
     }

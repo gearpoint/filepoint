@@ -12,7 +12,7 @@ WORKDIR /code
 COPY . .
 
 # Install required repos
-RUN apk add --update --no-cache make \
+RUN apk add --update make \
     bash \
     build-base \
     --repository http://dl-3.alpinelinux.org/alpine/edge/community \
@@ -44,7 +44,7 @@ COPY .aws .aws
 COPY ./config/config-docker.yaml ./config/config-docker.yaml
 COPY --from=builder /code/target/bin/${GOOS}_${GOARCH}/${APP_NAME}_1.0.0-SNAPSHOT_${GOOS}_${GOARCH} ./${APP_NAME}
 
-RUN apk add --update --no-cache \
+RUN apk add --update \
     build-base \
     --repository http://dl-3.alpinelinux.org/alpine/edge/community \
     --repository http://dl-3.alpinelinux.org/alpine/edge/main vips-dev

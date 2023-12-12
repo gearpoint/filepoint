@@ -299,7 +299,7 @@
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/views.GetSignedURLResponse"
+                                "$ref": "#/definitions/views.ListSignedURLResponse"
                             }
                         },
                         "headers": {
@@ -363,7 +363,7 @@
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/views.GetSignedURLResponse"
+                                "$ref": "#/definitions/views.ListSignedURLResponse"
                             }
                         },
                         "headers": {
@@ -448,6 +448,12 @@
                         "type": "string"
                     }
                 }
+            }
+        },
+        "views.ListSignedURLResponse": {
+            "type": "object",
+            "additionalProperties": {
+                "$ref": "#/definitions/views.GetSignedURLResponse"
             }
         }
     }

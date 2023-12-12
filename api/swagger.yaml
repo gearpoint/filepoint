@@ -33,6 +33,10 @@ definitions:
           type: string
         type: array
     type: object
+  views.ListSignedURLResponse:
+    additionalProperties:
+      $ref: '#/definitions/views.GetSignedURLResponse'
+    type: object
 info:
   contact:
     email: luanbaggio0@gmail.com
@@ -237,7 +241,7 @@ paths:
               type: string
           schema:
             items:
-              $ref: '#/definitions/views.GetSignedURLResponse'
+              $ref: '#/definitions/views.ListSignedURLResponse'
             type: array
         "400":
           description: Bad Request
@@ -279,7 +283,7 @@ paths:
               type: string
           schema:
             items:
-              $ref: '#/definitions/views.GetSignedURLResponse'
+              $ref: '#/definitions/views.ListSignedURLResponse'
             type: array
         "400":
           description: Bad Request

@@ -234,7 +234,7 @@ func (u *UploadController) GetSignedURL(c *gin.Context) {
 // @Tags Upload
 // @Param prefix query string true "Folder prefix"
 // @Produce json
-// @Success 200 {object} []views.GetSignedURLResponse
+// @Success 200 {object} []views.ListSignedURLResponse
 // @Failure 400 {object} http_utils.RestError
 // @Failure 500
 // @Header all {string} X-Request-Id "Request ID (UUID)"
@@ -264,7 +264,7 @@ func (u *UploadController) ListFolder(c *gin.Context) {
 // @Accept json
 // @Param prefixes body views.ListObjectsRequest true "prefixes"
 // @Produce json
-// @Success 200 {object} []views.GetSignedURLResponse
+// @Success 200 {object} []views.ListSignedURLResponse
 // @Failure 400 {object} http_utils.RestError
 // @Failure 500
 // @Header all {string} X-Request-Id "Request ID (UUID)"
@@ -300,11 +300,11 @@ func (u *UploadController) getFolderPrefixes(ctx context.Context, prefixesKey st
 }
 
 // listPrefixes list the given prefixes.
-func (u *UploadController) listPrefixes(c context.Context, prefixes []string) []*views.GetSignedURLResponse {
+func (u *UploadController) listPrefixes(c context.Context, prefixes []string) []*views.ListSignedURLResponse {
 	var mu sync.Mutex
 	var wg sync.WaitGroup
 
-	response := []*views.GetSignedURLResponse{}
+	response := []*views.ListSignedURLResponse{}
 	for _, objKey := range prefixes {
 		wg.Add(1)
 		go func(prefix string) {
@@ -314,7 +314,9 @@ func (u *UploadController) listPrefixes(c context.Context, prefixes []string) []
 			if err == nil {
 				if !cached.Temporary {
 					mu.Lock()
-					response = append(response, cached)
+					response = append(response, &views.ListSignedURLResponse{
+						prefix: cached,
+					})
 					mu.Unlock()
 				}
 				return
@@ -330,7 +332,9 @@ func (u *UploadController) listPrefixes(c context.Context, prefixes []string) []
 
 			if !signedUrlResponse.Temporary {
 				mu.Lock()
-				response = append(response, signedUrlResponse)
+				response = append(response, &views.ListSignedURLResponse{
+					prefix: signedUrlResponse,
+				})
 				mu.Unlock()
 			}
 		}(objKey)
