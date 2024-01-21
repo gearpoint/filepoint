@@ -7,8 +7,8 @@ Server:
 
 Routes:
   upload:
-    Topic: "filepoint.upload.queuing"
-    WebhookURL: "https://webhook.site/724155e8-f99f-41f9-a235-7ebff3740cee"
+    Topic: "filepoint_upload_queuing"
+    WebhookURL: "http://localhost:8000/filepoint-webhooks/upload"
 
 AWSConfig:
   Bucket: "filepoint-us"
@@ -23,6 +23,9 @@ KafkaConfig:
   MessagesPerSecond: 100
   MaxMessageBytes: 1048576
   MaxRetries: 10
+
+SQSConfig:
+  AWSRegion: "us-east-1"
 
 RedisConfig:
   Addr: "redis:6379"

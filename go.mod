@@ -5,6 +5,8 @@ go 1.21.0
 require (
 	github.com/AleksK1NG/api-mc v0.0.0-20210222141237-4ffdf6a3d5cb
 	github.com/ThreeDotsLabs/watermill v1.3.4
+	github.com/ThreeDotsLabs/watermill-amazonsqs v0.0.1
+	github.com/aws/aws-sdk-go v1.50.0
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.40.1
 	github.com/gin-contrib/requestid v0.0.6
 	github.com/gin-contrib/zap v0.1.0
@@ -120,9 +122,9 @@ require (
 	github.com/ugorji/go/codec v1.2.11 // indirect
 	go.uber.org/zap v1.25.0
 	golang.org/x/arch v0.5.0 // indirect
-	golang.org/x/crypto v0.13.0 // indirect
-	golang.org/x/net v0.15.0 // indirect
-	golang.org/x/sys v0.12.0 // indirect
+	golang.org/x/crypto v0.14.0 // indirect
+	golang.org/x/net v0.17.0 // indirect
+	golang.org/x/sys v0.13.0 // indirect
 	golang.org/x/text v0.13.0
 	google.golang.org/protobuf v1.31.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect

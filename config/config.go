@@ -20,6 +20,7 @@ type Config struct {
 	Routes      Routes
 	AWSConfig   AWSConfig
 	KafkaConfig KafkaConfig
+	SQSConfig   SQSConfig
 	RedisConfig RedisConfig
 }
 
@@ -58,6 +59,11 @@ type KafkaConfig struct {
 	MessagesPerSecond int64
 	MaxMessageBytes   int
 	MaxRetries        int
+}
+
+// SQSConfig is the SQS producer configuration.
+type SQSConfig struct {
+	AWSRegion string
 }
 
 // RedisConfig config is the Redis configuration.

@@ -16,6 +16,7 @@ import (
 type ServerConfig struct {
 	Config          *config.ServerConfig
 	Routes          config.Routes
+	PartitionKey    string
 	Publisher       message.Publisher
 	AWSRepository   *aws_repository.AWSRepository
 	RedisRepository *redis.RedisRepository
@@ -26,6 +27,7 @@ type Server struct {
 	Engine          *gin.Engine
 	config          *config.ServerConfig
 	routes          config.Routes
+	partitionKey    string
 	publisher       message.Publisher
 	awsRepository   *aws_repository.AWSRepository
 	redisRepository *redis.RedisRepository
@@ -37,6 +39,7 @@ func NewServer(serverConfig ServerConfig) *Server {
 		Engine:          gin.New(),
 		config:          serverConfig.Config,
 		routes:          serverConfig.Routes,
+		partitionKey:    serverConfig.PartitionKey,
 		publisher:       serverConfig.Publisher,
 		awsRepository:   serverConfig.AWSRepository,
 		redisRepository: serverConfig.RedisRepository,

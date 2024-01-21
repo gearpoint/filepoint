@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/gearpoint/filepoint/api"
 	config "github.com/gearpoint/filepoint/config"
 	"github.com/gearpoint/filepoint/internal/server"
@@ -34,44 +35,17 @@ func main() {
 	godotenv.Load()
 
 	envType := utils.GetEnvironmentType()
-	switch envType {
-	case utils.Development:
-		logger.InitLogger(logger.DevelopmentMode)
-	case utils.Production:
-		logger.InitLogger(logger.ProductionMode)
-	default:
-		log.Fatal("error initializing logger")
-	}
+	initLogger(envType)
 
 	logger.Info("starting Filepoint server...")
 
 	flag.StringVar(&configFile, "config", "./config/config-local.yaml", "aaa")
 	flag.Parse()
 
-	viperConfig, err := config.LoadConfig(configFile)
-	if err != nil {
-		logger.Fatal("error initializing config",
-			zap.Error(err),
-		)
-	}
+	cfg := getCfg(configFile)
 
-	cfg, err := config.ParseConfig(viperConfig)
-	if err != nil {
-		logger.Fatal("error getting config",
-			zap.Error(err),
-		)
-	}
-
-	publisher, err := watermill.NewKafkaPublisher(&cfg.KafkaConfig)
-	if err != nil {
-		logger.Fatal("error initializing Kafka publisher",
-			zap.Error(err),
-		)
-	}
+	publisher, partitionKey := setUpPublisher(cfg)
 	defer publisher.Close()
-	logger.Info("Kafka publisher connected",
-		zap.Any("brokers", cfg.KafkaConfig.Brokers),
-	)
 
 	awsRepository, err := aws_repository.NewAWSRepository(&cfg.AWSConfig, context.Background())
 	if err != nil {
@@ -100,6 +74,7 @@ func main() {
 	s := server.NewServer(server.ServerConfig{
 		Config:          &cfg.Server,
 		Routes:          cfg.Routes,
+		PartitionKey:    partitionKey,
 		Publisher:       publisher,
 		AWSRepository:   awsRepository,
 		RedisRepository: redisRepository,
@@ -107,4 +82,66 @@ func main() {
 	if err = s.Run(); err != nil {
 		logger.Fatal("error starting server")
 	}
+}
+
+func initLogger(envType utils.EnvironmentType) {
+	switch envType {
+	case utils.Development:
+		logger.InitLogger(logger.DevelopmentMode)
+	case utils.Production:
+		logger.InitLogger(logger.ProductionMode)
+	default:
+		log.Fatal("error initializing logger")
+	}
+}
+
+func getCfg(configFile string) *config.Config {
+	viperConfig, err := config.LoadConfig(configFile)
+	if err != nil {
+		logger.Fatal("error initializing config",
+			zap.Error(err),
+		)
+	}
+
+	cfg, err := config.ParseConfig(viperConfig)
+	if err != nil {
+		logger.Fatal("error getting config",
+			zap.Error(err),
+		)
+	}
+
+	return cfg
+}
+
+func setUpPublisher(cfg *config.Config) (message.Publisher, string) {
+	var err error
+	var publisher message.Publisher
+	var partitionKey string
+
+	switch utils.GetPubSubType() {
+	case utils.Kafka:
+		publisher, err = watermill.NewKafkaPublisher(&cfg.KafkaConfig)
+		if err == nil {
+			logger.Info("Kafka publisher connected successfully",
+				zap.Any("brokers", cfg.KafkaConfig.Brokers),
+			)
+		}
+	case utils.SQS:
+		publisher, err = watermill.NewSQSPublisher(&cfg.SQSConfig)
+		if err == nil {
+			logger.Info("SQS publisher connected successfully",
+				zap.Any("region", cfg.SQSConfig.AWSRegion),
+			)
+		}
+	default:
+		log.Fatal("error initializing the publisher")
+	}
+
+	if err != nil {
+		logger.Fatal("error initializing the publisher",
+			zap.Error(err),
+		)
+	}
+
+	return publisher, partitionKey
 }

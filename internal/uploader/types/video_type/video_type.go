@@ -65,8 +65,8 @@ func (u *VideoUploader) GetLabels(prefix string) []string {
 
 // HandleFile handles the video - converts it, etc.
 func (u *VideoUploader) HandleFile(prefix string) (io.ReadCloser, error) {
+	// todo: goffmpeg
 	return u.Config.AWSRepository.DownloadFile(prefix)
-	// goffmpeg?
 }
 
 func (u *VideoUploader) Upload(reader io.ReadCloser) (string, error) {

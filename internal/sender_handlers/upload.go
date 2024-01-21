@@ -97,6 +97,7 @@ func (h *UploadHandler) handleUpload(msg *message.Message, uploaderType *types.T
 		return "", nil, err
 	}
 
+	// todo: multiple img definitions
 	newS3Prefix, err := uploader.UploaderType.Upload(reader)
 	reader.Close()
 
@@ -121,6 +122,7 @@ func (h *UploadHandler) handleUpload(msg *message.Message, uploaderType *types.T
 		}
 	}
 
+	// todo: add to DynamoDB
 	h.awsRepository.PutObjectTagging(newS3Prefix, tagging)
 	h.uploadCacheControl.PrefixesCacheControl.AddKeyToCachedPrefixes(msg.Context(), newS3Prefix)
 

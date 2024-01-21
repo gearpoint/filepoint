@@ -20,7 +20,6 @@ import (
 	"github.com/gearpoint/filepoint/pkg/logger"
 	"github.com/gearpoint/filepoint/pkg/redis"
 	"github.com/gearpoint/filepoint/pkg/utils"
-	"github.com/gearpoint/filepoint/pkg/watermill"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 )
@@ -33,6 +32,7 @@ const (
 // UploadConfig contains the upload controller config.
 type UploadConfig struct {
 	Topic           string
+	PartitionKey    string
 	WebhookURL      string
 	Publisher       message.Publisher
 	AWSRepository   *aws_repository.AWSRepository
@@ -42,6 +42,7 @@ type UploadConfig struct {
 // UploadController is the controller for the upload route methods.
 type UploadController struct {
 	topic         string
+	partitionKey  string
 	webhookURL    string
 	publisher     message.Publisher
 	awsRepository *aws_repository.AWSRepository
@@ -52,12 +53,15 @@ type UploadController struct {
 func NewUploadController(cfg *UploadConfig) *UploadController {
 	return &UploadController{
 		topic:         cfg.Topic,
+		partitionKey:  cfg.PartitionKey,
 		webhookURL:    cfg.WebhookURL,
 		publisher:     cfg.Publisher,
 		awsRepository: cfg.AWSRepository,
 		cacheControl:  cache_control.NewUploadCacheControl(cfg.RedisRepository),
 	}
 }
+
+// todo: batch upload
 
 // Upload godoc
 // @Summary File upload
@@ -167,7 +171,9 @@ func (u *UploadController) uploadWorker(eventType types.UploaderTypes, uploader 
 	message := message.NewMessage(cfg.UploadView.Id, payload)
 	message.Metadata.Set(views.EventType, string(eventType))
 	message.Metadata.Set(views.S3Prefix, s3Prefix)
-	message.Metadata.Set(watermill.KafkaKey, cfg.UploadView.UserId)
+	if u.partitionKey != "" {
+		message.Metadata.Set(u.partitionKey, cfg.UploadView.UserId)
+	}
 
 	err = u.publisher.Publish(u.topic, message)
 	if err != nil {

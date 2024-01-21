@@ -9,20 +9,20 @@ import (
 
 const (
 	// defines the Key used to define the partition.
-	KafkaKey = "partition"
+	KafkaPartitionKey = "partition"
 )
 
 // NewKafkaPublisher creates a Publisher.
 func NewKafkaPublisher(kafkaConfig *config.KafkaConfig) (message.Publisher, error) {
-	saramaPublisherCfg := kafka.DefaultSaramaSyncPublisherConfig()
-	saramaPublisherCfg.Producer.MaxMessageBytes = kafkaConfig.MaxMessageBytes
-	saramaPublisherCfg.Producer.Retry.Max = kafkaConfig.MaxRetries
+	saramaCfg := kafka.DefaultSaramaSyncPublisherConfig()
+	saramaCfg.Producer.MaxMessageBytes = kafkaConfig.MaxMessageBytes
+	saramaCfg.Producer.Retry.Max = kafkaConfig.MaxRetries
 
 	publisherCfg := kafka.PublisherConfig{
 		Brokers:               kafkaConfig.Brokers,
 		Marshaler:             getKafkaMarshaler(),
-		OverwriteSaramaConfig: saramaPublisherCfg,
-		Tracer:                nil, // verify otel
+		OverwriteSaramaConfig: saramaCfg,
+		Tracer:                nil, // todo: verify otel
 	}
 
 	publisher, err := kafka.NewPublisher(
@@ -35,14 +35,14 @@ func NewKafkaPublisher(kafkaConfig *config.KafkaConfig) (message.Publisher, erro
 
 // NewKafkaSubscriber creates a Subscriber.
 func NewKafkaSubscriber(kafkaConfig *config.KafkaConfig) (message.Subscriber, error) {
-	saramaPublisherCfg := kafka.DefaultSaramaSyncPublisherConfig()
-	saramaPublisherCfg.Consumer.Offsets.Retry.Max = kafkaConfig.MaxRetries
+	saramaCfg := kafka.DefaultSaramaSyncPublisherConfig()
+	saramaCfg.Consumer.Offsets.Retry.Max = kafkaConfig.MaxRetries
 
 	subscriberCfg := kafka.SubscriberConfig{
 		Brokers:               kafkaConfig.Brokers,
 		Unmarshaler:           getKafkaMarshaler(),
-		OverwriteSaramaConfig: saramaPublisherCfg,
-		Tracer:                nil,
+		OverwriteSaramaConfig: saramaCfg,
+		Tracer:                nil, // todo: verify otel
 	}
 
 	subscriber, err := kafka.NewSubscriber(
@@ -57,7 +57,7 @@ func NewKafkaSubscriber(kafkaConfig *config.KafkaConfig) (message.Subscriber, er
 func getKafkaMarshaler() kafka.MarshalerUnmarshaler {
 	return kafka.NewWithPartitioningMarshaler(
 		func(topic string, msg *message.Message) (string, error) {
-			return msg.Metadata.Get(KafkaKey), nil
+			return msg.Metadata.Get(KafkaPartitionKey), nil
 		},
 	)
 }

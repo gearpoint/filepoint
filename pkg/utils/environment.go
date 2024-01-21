@@ -1,6 +1,8 @@
 package utils
 
-import "os"
+import (
+	"os"
+)
 
 const (
 	// The EnvironmentKey defines the key that contains the environment config.
@@ -8,6 +10,9 @@ const (
 
 	// The AddrKey defines the key that contains the app address.
 	AddrKey string = "FILEPOINT_ADDR"
+
+	// The PubSubKey defines the publisher/subscriber to be used.
+	PubSubKey string = "PUBSUB"
 
 	// The CloudfrontKeyId defines the key that contains the Cloudfront key ID.
 	CloudfrontKeyId string = "AWS_CLOUDFRONT_KEY_ID"
@@ -20,6 +25,15 @@ type EnvironmentType int64
 const (
 	Development EnvironmentType = iota
 	Production
+)
+
+// The PubSubType defines the app pub/sub.
+type PubSubType int64
+
+// The app environment types.
+const (
+	Kafka PubSubType = iota
+	SQS
 )
 
 // GetEnv retrieves an environment variable.
@@ -48,5 +62,19 @@ func GetEnvironmentType() EnvironmentType {
 		return Development
 	default:
 		return Production
+	}
+}
+
+// GetPubSubType returns the app pub/sub.
+func GetPubSubType() PubSubType {
+	envType := GetEnv(PubSubKey)
+
+	switch envType {
+	case "kafka":
+		return Kafka
+	case "sqs":
+		return SQS
+	default:
+		return SQS
 	}
 }

@@ -8,6 +8,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
 	"github.com/ThreeDotsLabs/watermill/message/router/plugin"
 	config "github.com/gearpoint/filepoint/config"
@@ -30,6 +31,20 @@ func main() {
 	godotenv.Load()
 
 	envType := utils.GetEnvironmentType()
+
+	initLogger(envType)
+
+	logger.Info("starting Filepoint server...")
+
+	flag.StringVar(&configFile, "config", "./config/config-local.yaml", "aaa")
+	flag.Parse()
+
+	cfg := getCfg(configFile)
+
+	setupRouter(cfg)
+}
+
+func initLogger(envType utils.EnvironmentType) {
 	switch envType {
 	case utils.Development:
 		logger.InitLogger(logger.DevelopmentMode)
@@ -38,12 +53,9 @@ func main() {
 	default:
 		log.Fatal("error initializing logger")
 	}
+}
 
-	logger.Info("starting Filepoint server...")
-
-	flag.StringVar(&configFile, "config", "./config/config-local.yaml", "aaa")
-	flag.Parse()
-
+func getCfg(configFile string) *config.Config {
 	viperConfig, err := config.LoadConfig(configFile)
 	if err != nil {
 		logger.Fatal("error initializing config",
@@ -58,7 +70,7 @@ func main() {
 		)
 	}
 
-	setupRouter(cfg)
+	return cfg
 }
 
 // setupRouter starts the router with the pub/sub configuration.
@@ -76,19 +88,7 @@ func setupRouter(cfg *config.Config) {
 	defer redisRepository.Client.Close()
 	logger.Info("Redis connected")
 
-	subscriber, err := watermill.NewKafkaSubscriber(&cfg.KafkaConfig)
-	if err != nil {
-		logger.Fatal("error initializing Kafka subscriber",
-			zap.Error(err),
-		)
-	}
-
-	publisher, err := watermill.NewHttpPublisher()
-	if err != nil {
-		logger.Fatal("error initializing HTTP publisher",
-			zap.Error(err),
-		)
-	}
+	publisher, subscriber := setUpPubSub(cfg)
 
 	router, err := watermill.NewRouter()
 	if err != nil {
@@ -148,4 +148,42 @@ func setupRouter(cfg *config.Config) {
 			zap.Error(err),
 		)
 	}
+}
+
+func setUpPubSub(cfg *config.Config) (message.Publisher, message.Subscriber) {
+	publisher, err := watermill.NewHttpPublisher()
+	if err != nil {
+		logger.Fatal("error initializing HTTP publisher",
+			zap.Error(err),
+		)
+	}
+
+	var subscriber message.Subscriber
+
+	switch utils.GetPubSubType() {
+	case utils.Kafka:
+		subscriber, err = watermill.NewKafkaSubscriber(&cfg.KafkaConfig)
+		if err == nil {
+			logger.Info("Kafka subscriber connected successfully",
+				zap.Any("brokers", cfg.KafkaConfig.Brokers),
+			)
+		}
+	case utils.SQS:
+		subscriber, err = watermill.NewSQSSubscriber(&cfg.SQSConfig)
+		if err == nil {
+			logger.Info("SQS subscriber connected successfully",
+				zap.Any("region", cfg.SQSConfig.AWSRegion),
+			)
+		}
+	default:
+		log.Fatal("error initializing the subscriber")
+	}
+
+	if err != nil {
+		logger.Fatal("error initializing the subscriber",
+			zap.Error(err),
+		)
+	}
+
+	return publisher, subscriber
 }
