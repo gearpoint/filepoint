@@ -3,6 +3,7 @@ FROM golang:1.21-alpine3.18 as builder
 ARG OS_NAME
 ARG ARCH
 ARG BINARY_NAME
+ARG CONFIG_FILE
 
 ENV GOOS=${OS_NAME:-linux} \
     GOARCH=${ARCH:-amd64}
@@ -32,6 +33,7 @@ LABEL maintainer="Gearpoint" \
 ARG OS_NAME
 ARG ARCH
 ARG BINARY_NAME
+ARG CONFIG_FILE
 
 ENV GOOS=${OS_NAME:-linux} \
     GOARCH=${ARCH:-amd64} \
@@ -41,7 +43,7 @@ WORKDIR /app
 
 COPY .env .env
 COPY .aws .aws
-COPY ./config/config-docker.yaml ./config/config-docker.yaml
+COPY ${CONFIG_FILE} ./config/config.yaml
 COPY --from=builder /code/target/bin/${GOOS}_${GOARCH}/${APP_NAME}_1.0.0-SNAPSHOT_${GOOS}_${GOARCH} ./${APP_NAME}
 
 RUN apk add --update \
@@ -51,4 +53,4 @@ RUN apk add --update \
 
 RUN chmod +x ./${APP_NAME}
 
-CMD ./${APP_NAME} -config ./config/config-docker.yaml
+CMD ./${APP_NAME} -config ./config/config.yaml

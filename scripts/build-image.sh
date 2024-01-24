@@ -3,14 +3,15 @@
 workdir="$(pwd)"
 docker_dir=${workdir}/build/package/docker
 
-version=$1
-registry=$2
-suffix=$3
-arch=$4
+config_file=$1
+version=$2
+registry=$3
+suffix=$4
+arch=$5
 prefixtag=""
 suffixtag=""
 if [ -n "$registry" ] ; then
-  prefixtag="${registry}:"
+  prefixtag="${registry}/"
 fi
 
 if [ -n "$version" ] ; then
@@ -33,5 +34,6 @@ binaries=$(ls $workdir/cmd)
 for b in $binaries ; do
     echo "building image to $b"
     echo "tag ${prefixtag}${b}${suffixtag} "
-    docker build --tag "${prefixtag}${b}${suffixtag}" -f "${docker_dir}/Dockerfile" --build-arg OS_NAME=${OS_} --build-arg ARCH=${ARCH_} --build-arg BINARY_NAME=$b "${workdir}"
+    docker build --tag "${prefixtag}${b}${suffixtag}" -f "${docker_dir}/Dockerfile" \
+          --build-arg OS_NAME=${OS_} --build-arg ARCH=${ARCH_} --build-arg BINARY_NAME=$b "${workdir}" --build-arg CONFIG_FILE="${config_file}"
 done

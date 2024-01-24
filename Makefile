@@ -32,10 +32,6 @@ prepare:
 build-local: prepare
 	scripts/build-binary.sh ${VERSION} ${TAGS}
 
-.PHONY: build-image
-build-image:
-	scripts/build-image.sh ${VERSION} ${REGISTRY} ${SUFFIX_TAG} ${OS_ARCH}
-
 .PHONY: test
 test: prepare
 	go test -outputdir=target/tests -coverprofile=coverage.out -v ./... \
@@ -59,22 +55,22 @@ godoc:
 	godoc -http=:6060
 
 DOCKER_REPO = "gearpoint"
-FILEPOINT = "filepoint"
-WEBHOOKS_SENDER = "filepoint-webhooks-sender"
-VERSION=1.0.0-SNAPSHOT
+SUFFIX_TAG = "latest"
 
-.PHONY: filepoint-tag-latest
-filepoint-tag-latest:
-	docker tag $(FILEPOINT):$(VERSION) $(DOCKER_REPO)/$(FILEPOINT):latest
+.PHONY: build-image
+build-image:
+	scripts/build-image.sh ".config/config-docker.yaml" ${VERSION} ${DOCKER_REPO} ${SUFFIX_TAG} ${OS_ARCH}
 
-.PHONY: filepoint-publish-latest
-filepoint-publish-latest: filepoint-tag-latest
-	docker push $(DOCKER_REPO)/$(FILEPOINT):latest
+.PHONY: build-image-prod
+build-image-prod:
+	scripts/build-image.sh ".config/config-prod.yaml" ${VERSION} ${DOCKER_REPO} ${SUFFIX_TAG} ${OS_ARCH}
 
-.PHONY: webhooks-sender-tag-latest
-webhooks-sender-tag-latest:
-	docker tag $(WEBHOOKS_SENDER):$(VERSION) $(DOCKER_REPO)/$(WEBHOOKS_SENDER):latest
+IMAGE_NAME = "filepoint"
+.PHONY: filepoint-publish
+filepoint-publish:
+	docker push ${DOCKER_REPO}/${FILEPOINT}:${SUFFIX_TAG}
 
-.PHONY: webhooks-sender-publish-latest
-webhooks-sender-publish-latest: webhooks-sender-tag-latest
-	docker push $(DOCKER_REPO)/$(WEBHOOKS_SENDER):latest
+IMAGE_NAME = "filepoint-webhooks-sender"
+.PHONY: webhooks-sender-publish
+webhooks-sender-publish:
+	docker push ${DOCKER_REPO}/${IMAGE_NAME}:${SUFFIX_TAG}

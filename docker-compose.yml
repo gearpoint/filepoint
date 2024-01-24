@@ -59,6 +59,7 @@ services:
       dockerfile: ./build/package/docker/Dockerfile
       args:
         - BINARY_NAME=filepoint
+        - CONFIG_FILE=./config/config-docker.yaml
     volumes:
       - ./config:/app/config
   filepoint-webhooks-sender:

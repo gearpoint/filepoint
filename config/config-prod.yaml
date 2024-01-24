@@ -1,0 +1,29 @@
+Server:
+  ReadTimeout: 10
+  WriteTimeout: 10
+  SSL: true
+  CtxDefaultTimeout: 12
+  Debug: true
+
+Routes:
+  upload:
+    Topic: "filepoint_upload_queuing"
+    WebhookURL: "http://gearpoint.prod-gearpoint:8000"
+
+AWSConfig:
+  Bucket: "filepoint-us"
+  Region: "us-east-1"
+  CloudfrontDist: "https://d2srbzn4h1o9jv.cloudfront.net"
+  VideoLabelingTopic: "arn:aws:sns:sa-east-1:029272547936:filepoint-video-labeling"
+  RekognitionRole: "arn:aws:iam::526264782134:role/filepoint-rekognition-access"
+
+SQSConfig:
+  AWSRegion: "us-east-1"
+
+RedisConfig:
+  Addr: "tcp://redis.prod-gearpoint:6379"
+  MinIdleConns: 200
+  PoolSize: 12000
+  PoolTimeout: 240
+  Username: ""
+  Password: ""
