@@ -59,11 +59,11 @@ SUFFIX_TAG = "latest"
 
 .PHONY: build-image
 build-image:
-	scripts/build-image.sh ".config/config-docker.yaml" ${VERSION} ${DOCKER_REPO} ${SUFFIX_TAG} ${OS_ARCH}
+	scripts/build-image.sh "config/config-docker.yaml" ${VERSION} ${DOCKER_REPO} ${SUFFIX_TAG} ${OS_ARCH}
 
 .PHONY: build-image-prod
 build-image-prod:
-	scripts/build-image.sh ".config/config-prod.yaml" ${VERSION} ${DOCKER_REPO} ${SUFFIX_TAG} ${OS_ARCH}
+	scripts/build-image.sh "config/config-prod.yaml" ${VERSION} ${DOCKER_REPO} ${SUFFIX_TAG} ${OS_ARCH}
 
 IMAGE_NAME = "filepoint"
 .PHONY: filepoint-publish
