@@ -3,7 +3,7 @@ Server:
   WriteTimeout: 10
   SSL: true
   CtxDefaultTimeout: 12
-  Debug: true
+  Debug: false
 
 Routes:
   upload:
