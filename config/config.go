@@ -53,6 +53,8 @@ type AWSConfig struct {
 	RekognitionRole    string
 }
 
+// todo: fix messaging config
+
 // KafkaConfig is the Kafka producer configuration.
 type KafkaConfig struct {
 	Brokers           []string

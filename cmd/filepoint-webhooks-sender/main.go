@@ -99,7 +99,7 @@ func setupRouter(cfg *config.Config) {
 	defer router.Close()
 
 	throttleMiddleware := middleware.NewThrottle(
-		cfg.KafkaConfig.MessagesPerSecond,
+		cfg.KafkaConfig.MessagesPerSecond, // todo: fix messaging config
 		time.Second,
 	)
 

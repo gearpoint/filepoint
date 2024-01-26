@@ -54,8 +54,8 @@ swagger:
 godoc:
 	godoc -http=:6060
 
-DOCKER_REPO = "gearpoint"
-SUFFIX_TAG = "latest"
+DOCKER_REPO=gearpoint
+SUFFIX_TAG=latest
 
 .PHONY: build-image
 build-image:
@@ -65,12 +65,10 @@ build-image:
 build-image-prod:
 	scripts/build-image.sh "config/config-prod.yaml" ${VERSION} ${DOCKER_REPO} ${SUFFIX_TAG} ${OS_ARCH}
 
-IMAGE_NAME = "filepoint"
 .PHONY: filepoint-publish
 filepoint-publish:
-	docker push ${DOCKER_REPO}/${FILEPOINT}:${SUFFIX_TAG}
+	docker push ${DOCKER_REPO}/filepoint:${VERSION}-${SUFFIX_TAG}
 
-IMAGE_NAME = "filepoint-webhooks-sender"
 .PHONY: webhooks-sender-publish
 webhooks-sender-publish:
-	docker push ${DOCKER_REPO}/${IMAGE_NAME}:${SUFFIX_TAG}
+	docker push ${DOCKER_REPO}/filepoint-webhooks-sender:${VERSION}-${SUFFIX_TAG}
