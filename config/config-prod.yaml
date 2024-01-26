@@ -28,7 +28,7 @@ SQSConfig:
   AWSRegion: "us-east-1"
 
 RedisConfig:
-  Addr: "tcp://redis.prod-gearpoint:6379"
+  Addr: "redis.prod-gearpoint:6379"
   MinIdleConns: 200
   PoolSize: 12000
   PoolTimeout: 240
