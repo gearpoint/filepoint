@@ -1,4 +1,4 @@
-FROM golang:1.21-alpine3.18 as builder
+FROM golang:1.22-alpine3.19 as builder
 
 ARG OS_NAME
 ARG ARCH
@@ -16,6 +16,7 @@ COPY . .
 RUN apk add --update make \
     bash \
     build-base \
+    musl-dev \
     --repository http://dl-3.alpinelinux.org/alpine/edge/community \
     --repository http://dl-3.alpinelinux.org/alpine/edge/main vips-dev
 
@@ -48,6 +49,7 @@ COPY --from=builder /code/target/bin/${GOOS}_${GOARCH}/${APP_NAME}_1.0.0-SNAPSHO
 
 RUN apk add --update \
     build-base \
+    musl-dev \
     --repository http://dl-3.alpinelinux.org/alpine/edge/community \
     --repository http://dl-3.alpinelinux.org/alpine/edge/main vips-dev
 
