@@ -8,6 +8,7 @@ version=$2
 registry=$3
 suffix=$4
 arch=$5
+
 prefixtag=""
 suffixtag=""
 if [ -n "$registry" ] ; then
@@ -32,8 +33,10 @@ ARCH_=${split[1]}
 binaries=$(ls $workdir/cmd)
 
 for b in $binaries ; do
-    echo "building image to $b"
-    echo "tag ${prefixtag}${b}${suffixtag} "
-    docker build --tag "${prefixtag}${b}${suffixtag}" -f "${docker_dir}/Dockerfile" \
+    tag=${prefixtag}${b}${suffixtag}
+
+    echo "Building image to $b..."
+    echo "Tag ${tag} "
+    docker build --tag "${tag}" -f "${docker_dir}/Dockerfile" \
           --build-arg OS_NAME=${OS_} --build-arg ARCH=${ARCH_} --build-arg BINARY_NAME=$b "${workdir}" --build-arg CONFIG_FILE="${config_file}"
 done

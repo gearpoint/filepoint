@@ -13,7 +13,7 @@ Routes:
 AWSConfig:
   Bucket: "filepoint-us"
   Region: "us-east-1"
-  CloudfrontDist: "https://d2srbzn4h1o9jv.cloudfront.net"
+  CloudfrontDist: "https://files.gearpoint.club"
   VideoLabelingTopic: "arn:aws:sns:sa-east-1:029272547936:filepoint-video-labeling"
   RekognitionRole: "arn:aws:iam::526264782134:role/filepoint-rekognition-access"
 

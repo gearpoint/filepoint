@@ -3,8 +3,9 @@
 version=$1
 tags=$2
 workdir="$(pwd)"
-binary_dir="${workdir}/target/bin"
 archs=`cat ${workdir}/scripts/platforms`
+binary_dir="${workdir}/target/bin"
+binary_platform_dir=${binary_dir}/${GOOS}_${GOARCH}
 
 CGO_ENABLED=0
 
@@ -13,7 +14,6 @@ do
   split=(${arch//\// })
   GOOS=${split[0]}
   GOARCH=${split[1]}
-  binary_platform_dir=${binary_dir}/${GOOS}_${GOARCH}
 
   go build -ldflags "-X 'main.Version=${version}'" ${tags} -trimpath -o ${binary_platform_dir} ${workdir}/...
 done
@@ -23,7 +23,6 @@ do
   split=(${arch//\// })
   GOOS=${split[0]}
   GOARCH=${split[1]}
-  binary_platform_dir=${binary_dir}/${GOOS}_${GOARCH}
 
   binaries=`ls ${binary_platform_dir}`
 

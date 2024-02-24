@@ -47,12 +47,6 @@ COPY .aws .aws
 COPY ${CONFIG_FILE} ./config/config.yaml
 COPY --from=builder /code/target/bin/${GOOS}_${GOARCH}/${APP_NAME}_1.0.0-SNAPSHOT_${GOOS}_${GOARCH} ./${APP_NAME}
 
-RUN apk add --update \
-    build-base \
-    musl-dev \
-    --repository http://dl-3.alpinelinux.org/alpine/edge/community \
-    --repository http://dl-3.alpinelinux.org/alpine/edge/main vips-dev
-
 RUN chmod +x ./${APP_NAME}
 
 CMD ./${APP_NAME} -config ./config/config.yaml

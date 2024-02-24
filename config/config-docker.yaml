@@ -7,13 +7,13 @@ Server:
 
 Routes:
   upload:
-    Topic: "filepoint_upload_queuing"
+    Topic: "filepoint_upload_queuing_dev"
     WebhookURL: "http://localhost:8000/filepoint-webhooks/upload"
 
 AWSConfig:
-  Bucket: "filepoint-us"
+  Bucket: "filepoint-us-dev"
   Region: "us-east-1"
-  CloudfrontDist: "https://d2srbzn4h1o9jv.cloudfront.net"
+  CloudfrontDist: "https://d1dczmkof7ci1q.cloudfront.net"
   VideoLabelingTopic: "arn:aws:sns:sa-east-1:029272547936:filepoint-video-labeling"
   RekognitionRole: "arn:aws:iam::526264782134:role/filepoint-rekognition-access"
 
