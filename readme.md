@@ -107,6 +107,6 @@ To publish to Docker Hub, you must build, tag and push your images:
 ```sh
 make build-image
 docker login
-make filepoint-publish-latest
-make webhooks-sender-publish-latest
+make publish-filepoint
+make publish-webhooks-sender
 ```

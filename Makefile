@@ -57,6 +57,14 @@ godoc:
 DOCKER_REPO=gearpoint
 SUFFIX_TAG=latest
 
+.PHONY: build-base
+build-base:
+	docker build --tag "${DOCKER_REPO}/filepoint-base:${SUFFIX_TAG}" -f "build/base/docker/Dockerfile" .
+
+.PHONY: base-publish
+publish-base:
+	docker push ${DOCKER_REPO}/filepoint-base:${SUFFIX_TAG}
+
 .PHONY: build-image
 build-image:
 	scripts/build-image.sh "config/config-docker.yaml" ${VERSION} ${DOCKER_REPO} ${SUFFIX_TAG} ${OS_ARCH}
@@ -65,10 +73,10 @@ build-image:
 build-image-prod:
 	scripts/build-image.sh "config/config-prod.yaml" ${VERSION} ${DOCKER_REPO} ${SUFFIX_TAG} ${OS_ARCH}
 
-.PHONY: filepoint-publish
-filepoint-publish:
+.PHONY: publish-filepoint
+publish-filepoint:
 	docker push ${DOCKER_REPO}/filepoint:${VERSION}-${SUFFIX_TAG}
 
-.PHONY: webhooks-sender-publish
-webhooks-sender-publish:
+.PHONY: publish-webhooks-sender
+publish-webhooks-sender:
 	docker push ${DOCKER_REPO}/filepoint-webhooks-sender:${VERSION}-${SUFFIX_TAG}

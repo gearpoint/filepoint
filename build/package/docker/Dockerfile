@@ -1,4 +1,4 @@
-FROM golang:1.22-alpine3.19 as builder
+FROM gearpoint/filepoint-base:latest as builder
 
 ARG OS_NAME
 ARG ARCH
@@ -12,21 +12,13 @@ WORKDIR /code
 
 COPY . .
 
-# Install required repos
-RUN apk add --update make \
-    bash \
-    build-base \
-    musl-dev \
-    --repository http://dl-3.alpinelinux.org/alpine/edge/community \
-    --repository http://dl-3.alpinelinux.org/alpine/edge/main vips-dev
-
 RUN make deps
 
 RUN echo ${GOOS}/${GOARCH} > scripts/plataforms \
     && make clean test build-local
 
 # Start a new stage from scratch
-FROM alpine:latest
+FROM gearpoint/filepoint-base:latest
 
 LABEL maintainer="Gearpoint" \
  contributor="Luan Baggio <luanbaggio0@gmail.com>"
