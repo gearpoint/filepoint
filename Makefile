@@ -1,3 +1,7 @@
+# Includes .env file
+# Currently, user REGISTRY variable to get the ECR URL
+include .env
+
 VERSION=$(shell cat VERSION)
 
 ifeq ($(shell test -f "/etc/alpine-release" && echo -n true),true)
@@ -28,8 +32,8 @@ clean:
 prepare:
 	chmod +x scripts/* && scripts/prepare.sh
 
-.PHONY: build-local
-build-local: prepare
+.PHONY: build-binary
+build-binary: prepare
 	scripts/build-binary.sh ${VERSION} ${TAGS}
 
 .PHONY: test
@@ -54,29 +58,30 @@ swagger:
 godoc:
 	godoc -http=:6060
 
-DOCKER_REPO=gearpoint
-SUFFIX_TAG=latest
-
+BASE_TAG = ${REGISTRY}/prod-filepoint-base-repo:latest
 .PHONY: build-base
 build-base:
-	docker build --tag "${DOCKER_REPO}/filepoint-base:${SUFFIX_TAG}" -f "build/base/docker/Dockerfile" .
+	docker build --tag ${BASE_TAG} -f "build/base/docker/Dockerfile" .
 
 .PHONY: base-publish
 publish-base:
-	docker push ${DOCKER_REPO}/filepoint-base:${SUFFIX_TAG}
+	docker push ${BASE_TAG}
 
-.PHONY: build-image
-build-image:
-	scripts/build-image.sh "config/config-docker.yaml" ${VERSION} ${DOCKER_REPO} ${SUFFIX_TAG} ${OS_ARCH}
+CONFIG_FILE = "config/config-prod.yaml"
+SUFFIX = ${VERSION}-latest
 
-.PHONY: build-image-prod
-build-image-prod:
-	scripts/build-image.sh "config/config-prod.yaml" ${VERSION} ${DOCKER_REPO} ${SUFFIX_TAG} ${OS_ARCH}
+.PHONY: build-images
+build-images:
+	scripts/build-images.sh ${REGISTRY} ${CONFIG_FILE} ${SUFFIX} ${OS_ARCH}
 
+FILEPOINT_TAG = ${REGISTRY}/prod-filepoint-repo:${SUFFIX}
 .PHONY: publish-filepoint
 publish-filepoint:
-	docker push ${DOCKER_REPO}/filepoint:${VERSION}-${SUFFIX_TAG}
+	docker tag filepoint:${SUFFIX} ${FILEPOINT_TAG} \
+	&& docker push ${FILEPOINT_TAG}
 
+WEBHOOKS_TAG = ${REGISTRY}/prod-filepoint-webhooks-repo:${SUFFIX}
 .PHONY: publish-webhooks-sender
 publish-webhooks-sender:
-	docker push ${DOCKER_REPO}/filepoint-webhooks-sender:${VERSION}-${SUFFIX_TAG}
+	docker tag filepoint-webhooks-sender:${SUFFIX} ${WEBHOOKS_TAG} \
+	&& docker push ${WEBHOOKS_TAG}

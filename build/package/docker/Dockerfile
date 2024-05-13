@@ -1,4 +1,6 @@
-FROM gearpoint/filepoint-base:latest as builder
+ARG REGISTRY
+
+FROM ${REGISTRY}/prod-filepoint-base-repo:latest as builder
 
 ARG OS_NAME
 ARG ARCH
@@ -15,10 +17,10 @@ COPY . .
 RUN make deps
 
 RUN echo ${GOOS}/${GOARCH} > scripts/plataforms \
-    && make clean test build-local
+    && make clean test build-binary
 
 # Start a new stage from scratch
-FROM gearpoint/filepoint-base:latest
+FROM ${REGISTRY}/prod-filepoint-base-repo:latest
 
 LABEL maintainer="Gearpoint" \
  contributor="Luan Baggio <luanbaggio0@gmail.com>"

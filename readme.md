@@ -7,29 +7,29 @@ Filepoint is the Gearpoint's file manager service. It's built for performance.
 - [Golang](https://go.dev/)
 - [Gin Framework](https://gin-gonic.com/)
 - **Logs and tracing**
-    - [Zap Logger](https://github.com/uber-go/zap)
-    - [Zap Logger Gin Middleware](https://github.com/gin-contrib/zap)
-    - [OpenTelemetry](https://opentelemetry.io/)
-    - [OpenTelemetry for Go](https://opentelemetry.io/docs/instrumentation/go/)
+  - [Zap Logger](https://github.com/uber-go/zap)
+  - [Zap Logger Gin Middleware](https://github.com/gin-contrib/zap)
+  - [OpenTelemetry](https://opentelemetry.io/)
+  - [OpenTelemetry for Go](https://opentelemetry.io/docs/instrumentation/go/)
 - **Pub/Sub and Kafka**
-    - [Apache Kafka](https://kafka.apache.org/get-started)
-    - [Sarama Apache Kafka Go Library](https://github.com/IBM/sarama)
-    - [Watermill](https://github.com/ThreeDotsLabs/watermill)
-    - [Watermill Kafka Pub/Sub Implementation](https://github.com/ThreeDotsLabs/watermill-kafka)
-    - [Watermill Http Pub/Sub Implementation](https://github.com/ThreeDotsLabs/watermill-http)
+  - [Apache Kafka](https://kafka.apache.org/get-started)
+  - [Sarama Apache Kafka Go Library](https://github.com/IBM/sarama)
+  - [Watermill](https://github.com/ThreeDotsLabs/watermill)
+  - [Watermill Kafka Pub/Sub Implementation](https://github.com/ThreeDotsLabs/watermill-kafka)
+  - [Watermill Http Pub/Sub Implementation](https://github.com/ThreeDotsLabs/watermill-http)
 - **Caching**
-    - [Redis](https://redis.io/)
-    - [Redis client for Go](https://github.com/redis/go-redis)
+  - [Redis](https://redis.io/)
+  - [Redis client for Go](https://github.com/redis/go-redis)
 - **Docs**
-    - [Swagger](https://swagger.io/)
-    - [Gin Swagger](https://github.com/swaggo/gin-swagger)
+  - [Swagger](https://swagger.io/)
+  - [Gin Swagger](https://github.com/swaggo/gin-swagger)
 - **AWS**
-    - [AWS S3](https://docs.aws.amazon.com/s3/)
-    - [AWS Cloudfront](https://aws.amazon.com/cloudfront/)
-    - [AWS Rekognition](https://aws.amazon.com/rekognition/)
+  - [AWS S3](https://docs.aws.amazon.com/s3/)
+  - [AWS Cloudfront](https://aws.amazon.com/cloudfront/)
+  - [AWS Rekognition](https://aws.amazon.com/rekognition/)
 - **File Handle**
-    - [libvips](https://github.com/libvips/libvips)
-    - [bimg](https://github.com/h2non/bimg)
+  - [libvips](https://github.com/libvips/libvips)
+  - [bimg](https://github.com/h2non/bimg)
 
 ## The project
 
@@ -38,6 +38,7 @@ Filepoint is the Gearpoint's file manager service. It's built for performance.
 ## Building and running
 
 First of all, set the environment file:
+
 ```sh
 cp .env.example .env
 ```
@@ -86,18 +87,41 @@ You can check it in the [docs](https://docs.aws.amazon.com/AmazonCloudFront/late
 
 The key must be in the ```.aws``` folder.
 
-## Docker Hub
+## Container Registry
 
-Docker Hub is the world's largestlibrary and community for container images
+AWS ECR is being used as the Container Registry
+
+### Configuring
+
+1. Configure [aws cli](https://aws.amazon.com/cli/):
+
+    ```sh
+    aws configure # use your credentials here
+    ```
+
+2. Authenticate in Docker:
+
+    For this step, use Docker GUI or docker login command.
+
+    Then, execute the following:
+
+    ```sh
+    aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin {{ REGISTRY }}
+    ```
+
+    Now, you should see "Login Succeeded"
 
 ### Pulling
 
-To pull from Docker Hub, you must be authenticated in private repositories:
+To pull from ECR private repositories, you must first be authenticated in AWS:
 
-```sh
 docker login
 docker pull gearpoint/filepoint
 docker pull gearpoint/filepoint-webhooks-sender
+
+```sh
+docker pull {{ REGISTRY }}/prod-filepoint-repo
+docker pull {{ REGISTRY }}/prod-filepoint-webhooks-repo
 ```
 
 ### Publishing
@@ -105,8 +129,8 @@ docker pull gearpoint/filepoint-webhooks-sender
 To publish to Docker Hub, you must build, tag and push your images:
 
 ```sh
-make build-image
-docker login
+make build-base # only first time
+make build-images
 make publish-filepoint
 make publish-webhooks-sender
 ```

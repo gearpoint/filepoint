@@ -28,7 +28,7 @@ SQSConfig:
   AWSRegion: "us-east-1"
 
 RedisConfig:
-  Addr: "prod-elasticache-7g46gm.serverless.use1.cache.amazonaws.com:6379"
+  Addr: "prod-elasticache.7g46gm.clustercfg.use1.cache.amazonaws.com:6379"
   MinIdleConns: 200
   PoolSize: 12000
   PoolTimeout: 240
