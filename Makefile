@@ -1,5 +1,5 @@
 # Includes .env file
-# Currently, user REGISTRY variable to get the ECR URL
+# Currently, uses REGISTRY variable to get the ECR URL
 include .env
 
 VERSION=$(shell cat VERSION)
@@ -67,21 +67,27 @@ build-base:
 publish-base:
 	docker push ${BASE_TAG}
 
+# The configuration file to be used.
+# Important: if you pretend to use it in a Docker container for development,
+# you can set this as a volume or build this with "config-docker" instead.
 CONFIG_FILE = "config/config-prod.yaml"
-SUFFIX = ${VERSION}-latest
 
 .PHONY: build-images
 build-images:
-	scripts/build-images.sh ${REGISTRY} ${CONFIG_FILE} ${SUFFIX} ${OS_ARCH}
+	scripts/build-images.sh ${REGISTRY} ${CONFIG_FILE} ${VERSION} ${OS_ARCH}
 
-FILEPOINT_TAG = ${REGISTRY}/prod-filepoint-repo:${SUFFIX}
+# TAG controls the image tagging.
+# You can use ${VERSION}, "development" or "latest"
+TAG = "development"
+
+FILEPOINT_TAG = ${REGISTRY}/prod-filepoint-repo:${TAG}
 .PHONY: publish-filepoint
 publish-filepoint:
-	docker tag filepoint:${SUFFIX} ${FILEPOINT_TAG} \
+	docker tag filepoint:${VERSION} ${FILEPOINT_TAG} \
 	&& docker push ${FILEPOINT_TAG}
 
-WEBHOOKS_TAG = ${REGISTRY}/prod-filepoint-webhooks-repo:${SUFFIX}
+WEBHOOKS_TAG = ${REGISTRY}/prod-filepoint-webhooks-repo:${TAG}
 .PHONY: publish-webhooks-sender
 publish-webhooks-sender:
-	docker tag filepoint-webhooks-sender:${SUFFIX} ${WEBHOOKS_TAG} \
+	docker tag filepoint-webhooks-sender:${VERSION} ${WEBHOOKS_TAG} \
 	&& docker push ${WEBHOOKS_TAG}
