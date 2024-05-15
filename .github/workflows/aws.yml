@@ -57,7 +57,10 @@ jobs:
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
 
-    - name: Write content to file
+    - name: Add .env
+      run: cat ${{ github.workspace }}/.env.example > .env
+
+    - name: Add filepoint-cloudfront.pem
       uses: frdrwrt/write-to-file@v1.3
       with:
           filepath: ${{ github.workspace }}/.aws/filepoint-cloudfront.pem
