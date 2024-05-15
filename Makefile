@@ -1,7 +1,3 @@
-# Includes .env file
-# Currently, uses REGISTRY variable to get the ECR URL
-include .env
-
 VERSION=$(shell cat VERSION)
 
 ifeq ($(shell test -f "/etc/alpine-release" && echo -n true),true)
@@ -58,35 +54,34 @@ swagger:
 godoc:
 	godoc -http=:6060
 
-BASE_TAG = ${REGISTRY}/prod-filepoint-base-repo:latest
+REPOSITORY = "029272547936.dkr.ecr.us-east-1.amazonaws.com"
+
+BASE_TAG = ${REPOSITORY}/prod-filepoint-base-repo:latest
 .PHONY: build-base
 build-base:
-	docker build --tag ${BASE_TAG} -f "build/base/docker/Dockerfile" .
-
-.PHONY: base-publish
-publish-base:
-	docker push ${BASE_TAG}
+	docker build --tag ${BASE_TAG} -f "build/base/docker/Dockerfile" . \
+	&& docker push ${BASE_TAG}
 
 # The configuration file to be used.
 # Important: if you pretend to use it in a Docker container for development,
 # you can set this as a volume or build this with "config-docker" instead.
 CONFIG_FILE = "config/config-prod.yaml"
 
+# TAG controls the image tagging.
+# You can use ${VERSION} or "latest"
+TAG = ${VERSION}
+
 .PHONY: build-images
 build-images:
-	scripts/build-images.sh ${REGISTRY} ${CONFIG_FILE} ${VERSION} ${OS_ARCH}
+	scripts/build-images.sh ${REPOSITORY} ${CONFIG_FILE} ${VERSION} ${OS_ARCH}
 
-# TAG controls the image tagging.
-# You can use ${VERSION}, "development" or "latest"
-TAG = "development"
-
-FILEPOINT_TAG = ${REGISTRY}/prod-filepoint-repo:${TAG}
+FILEPOINT_TAG = ${REPOSITORY}/prod-filepoint-repo:${TAG}
 .PHONY: publish-filepoint
 publish-filepoint:
 	docker tag filepoint:${VERSION} ${FILEPOINT_TAG} \
 	&& docker push ${FILEPOINT_TAG}
 
-WEBHOOKS_TAG = ${REGISTRY}/prod-filepoint-webhooks-repo:${TAG}
+WEBHOOKS_TAG = ${REPOSITORY}/prod-filepoint-webhooks-repo:${TAG}
 .PHONY: publish-webhooks-sender
 publish-webhooks-sender:
 	docker tag filepoint-webhooks-sender:${VERSION} ${WEBHOOKS_TAG} \

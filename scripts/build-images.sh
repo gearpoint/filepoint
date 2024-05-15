@@ -3,7 +3,7 @@
 workdir="$(pwd)"
 docker_dir=${workdir}/build/package/docker
 
-registry=$1
+repository=$1
 config_file=$2
 suffix=$3
 arch=$4
@@ -25,7 +25,7 @@ for b in $binaries ; do
     echo "Building binary $b image..."
     echo "Tag: ${tag} "
     docker build --tag "${tag}" -f "${docker_dir}/Dockerfile" "${workdir}" \
-      --build-arg REGISTRY=$registry --build-arg CONFIG_FILE="${config_file}" \
+      --build-arg REPOSITORY=$repository --build-arg CONFIG_FILE="${config_file}" \
       --build-arg OS_NAME=${OS_}     --build-arg ARCH=${ARCH_} \
       --build-arg BINARY_NAME=$b
 done

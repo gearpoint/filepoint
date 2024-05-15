@@ -1,6 +1,6 @@
-ARG REGISTRY
+ARG REPOSITORY
 
-FROM ${REGISTRY}/prod-filepoint-base-repo:latest as builder
+FROM ${REPOSITORY}/prod-filepoint-base-repo:latest as builder
 
 ARG OS_NAME
 ARG ARCH
@@ -20,7 +20,7 @@ RUN echo ${GOOS}/${GOARCH} > scripts/plataforms \
     && make clean test build-binary
 
 # Start a new stage from scratch
-FROM ${REGISTRY}/prod-filepoint-base-repo:latest
+FROM ${REPOSITORY}/prod-filepoint-base-repo:latest
 
 LABEL maintainer="Gearpoint" \
  contributor="Luan Baggio <luanbaggio0@gmail.com>"
@@ -39,7 +39,7 @@ WORKDIR /app
 COPY .env .env
 COPY .aws .aws
 COPY ${CONFIG_FILE} ./config/config.yaml
-COPY --from=builder /code/target/bin/${GOOS}_${GOARCH}/${APP_NAME}_1.0.0-SNAPSHOT_${GOOS}_${GOARCH} ./${APP_NAME}
+COPY --from=builder /code/target/bin/${GOOS}_${GOARCH}/${APP_NAME} ./${APP_NAME}
 
 RUN chmod +x ./${APP_NAME}
 
