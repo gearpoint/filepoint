@@ -57,8 +57,12 @@ jobs:
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
 
-    - name: Add filepoint-cloudfront.pem to build context
-      run: cat ${{ secrets.FILEPOINT_CLOUDFRONT_PEM }} > ${{ github.workspace }}/.aws/filepoint-cloudfront.pem
+    - name: Write content to file
+      uses: actions/write-to-file@v1.0
+      with:
+        filepath: ${{ github.workspace }}/.aws/filepoint-cloudfront.pem
+        content: ${{ secrets.FILEPOINT_CLOUDFRONT_PEM }}
+        mode: 0655
 
     - name: Build, tag, and push image to Amazon ECR
       run: |
