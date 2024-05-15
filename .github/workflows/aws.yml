@@ -58,11 +58,11 @@ jobs:
       uses: docker/setup-buildx-action@v3
 
     - name: Write content to file
-      uses: actions/write-to-file@v1
+      uses: frdrwrt/write-to-file@v1.3
       with:
-        filepath: ${{ github.workspace }}/.aws/filepoint-cloudfront.pem
-        content: ${{ secrets.FILEPOINT_CLOUDFRONT_PEM }}
-        mode: 0655
+          filepath: ${{ github.workspace }}/.aws/filepoint-cloudfront.pem
+          content: ${{ secrets.FILEPOINT_CLOUDFRONT_PEM }}
+          mode: 0655
 
     - name: Build, tag, and push image to Amazon ECR
       run: |
