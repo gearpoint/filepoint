@@ -1,0 +1,164 @@
+name: Deploy Filepoint services to Amazon ECS
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+env:
+  AWS_REGION: us-east-1
+  ECS_CLUSTER: prod-gearpoint
+
+permissions:
+  contents: read
+
+jobs:
+
+  get_version:
+    runs-on: ubuntu-latest
+    outputs:
+      current-version: ${{ steps.version-step.outputs.version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Get version
+        id: version-step
+        uses: michmich112/extract-version@main
+        with:
+          version-file: ${{ github.workspace }}/VERSION
+          schema: major.minor.build[-patch]
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    environment: production
+    needs: get_version
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v1
+
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v3
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build, tag, and push image to Amazon ECR
+      run: |
+        make build-images
+        make publish-filepoint
+        make publish-webhooks-sender
+
+  deploy_filepoint:
+    name: Deploy Filepoint
+    runs-on: ubuntu-latest
+    environment: production
+    needs:
+      - get_version
+      - build
+    env:
+      ECR_REPOSITORY: prod-filepoint-repo
+      ECS_SERVICE: prod-filepoint
+      CONTAINER_NAME: prod-filepoint
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v1
+
+    - name: Download task definition
+      run: |
+        aws ecs describe-task-definition --task-definition ${{ env.ECS_SERVICE }} --query taskDefinition > filepoint-task.json
+
+    - name: Fill in the new image ID in the Amazon ECS task definition
+      id: task-def
+      uses: aws-actions/amazon-ecs-render-task-definition@v1
+      with:
+        task-definition: filepoint-task.json
+        container-name: ${{ env.CONTAINER_NAME }}
+        image: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ needs.get_version.outputs.current-version }}
+
+    - name: updating task-definition file
+      run: cat ${{ steps.task-def.outputs.task-definition }} > filepoint-task.json
+
+    - name: Deploy Amazon ECS task definition
+      uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+      with:
+        task-definition: ${{ steps.task-def.outputs.task-definition }}
+        service: ${{ env.ECS_SERVICE }}
+        cluster: ${{ env.ECS_CLUSTER }}
+        wait-for-service-stability: true
+
+  deploy_filepoint_webhooks:
+    name: Deploy Filepoint Webhooks Sender
+    runs-on: ubuntu-latest
+    environment: production
+    needs:
+      - get_version
+      - build
+    env:
+      ECR_REPOSITORY: prod-filepoint-webhooks-repo
+      ECS_SERVICE: prod-filepoint-webhooks
+      CONTAINER_NAME: prod-filepoint-webhooks
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v1
+
+    - name: Download task definition
+      run: |
+        aws ecs describe-task-definition --task-definition ${{ env.ECS_SERVICE }} --query taskDefinition > filepoint-webhooks-task.json
+
+    - name: Fill in the new image ID in the Amazon ECS task definition
+      id: task-def
+      uses: aws-actions/amazon-ecs-render-task-definition@v1
+      with:
+        task-definition: filepoint-webhooks-task.json
+        container-name: ${{ env.CONTAINER_NAME }}
+        image: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ needs.get_version.outputs.current-version }}
+
+    - name: updating task-definition file
+      run: cat ${{ steps.task-def.outputs.task-definition }} > filepoint-webhooks-task.json
+
+    - name: Deploy Amazon ECS task definition
+      uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+      with:
+        task-definition: ${{ steps.task-def.outputs.task-definition }}
+        service: ${{ env.ECS_SERVICE }}
+        cluster: ${{ env.ECS_CLUSTER }}
+        wait-for-service-stability: true
