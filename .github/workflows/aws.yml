@@ -58,7 +58,7 @@ jobs:
       uses: docker/setup-buildx-action@v3
 
     - name: Write content to file
-      uses: actions/write-to-file@v1.0
+      uses: actions/write-to-file@v1
       with:
         filepath: ${{ github.workspace }}/.aws/filepoint-cloudfront.pem
         content: ${{ secrets.FILEPOINT_CLOUDFRONT_PEM }}
