@@ -70,8 +70,8 @@ jobs:
     - name: Build, tag, and push image to Amazon ECR
       run: |
         make build-images
-        make publish-filepoint
-        make publish-webhooks-sender
+        make publish-filepoint && publish-filepoint TAG=latest
+        make publish-webhooks-sender && publish-filepoint TAG=latest
 
   deploy_filepoint:
     name: Deploy Filepoint
