@@ -7,7 +7,7 @@ import (
 	"errors"
 	"io"
 
-	"github.com/gearpoint/filepoint/internal/uploader/types"
+	"github.com/gearpoint/filepoint/internal/uploader/strategies"
 	"github.com/gearpoint/filepoint/internal/views"
 	"github.com/gearpoint/filepoint/pkg/aws_repository"
 	"github.com/gearpoint/filepoint/pkg/utils"
@@ -15,37 +15,50 @@ import (
 )
 
 const (
-	// The uploader type key.
-	Key types.UploaderTypes = "image"
+	// The uploader event type key.
+	Key strategies.EventTypeKey = "image"
 	// defines the file quality.
 	imageQuality = 60
 )
 
 const (
-	// Defines the upload max size in bytes. Actual 15 mebibytes.
+	// Defines the upload max size in bytes. Actual: 15 mebibytes.
 	uploadMaxSize int64 = 15 << 20
 )
 
-// Map of allowed images content types.
-var ContentTypes = utils.ContentTypeMapping{
-	"image/png":     "png",
-	"image/jpeg":    "jpeg",
-	"image/jpg":     "jpg",
-	"image/svg+xml": "svg",
-	"image/webp":    "webp",
-	"image/tiff":    "tiff",
+// ImageUploader is the image uploader implementation.
+type ImageUploader struct {
+	config       *strategies.UploaderConfig
+	contentTypes utils.ContentTypeMapping
 }
 
-// NewUploaderType returns a new ImageUploader.
-var NewUploaderType types.UploaderTypeLambda = func(uploaderTypeConfig *types.UploaderTypeConfig) types.UploaderType {
+// NewUploader returns a new Uploader instance.
+func NewUploader() strategies.Uploader {
 	return &ImageUploader{
-		Config: uploaderTypeConfig,
+		contentTypes: utils.ContentTypeMapping{
+			"image/png":     "png",
+			"image/jpeg":    "jpeg",
+			"image/jpg":     "jpg",
+			"image/svg+xml": "svg",
+			"image/webp":    "webp",
+			"image/tiff":    "tiff",
+		},
 	}
 }
 
-// ImageUploader is the image uploader implementation.
-type ImageUploader struct {
-	Config *types.UploaderTypeConfig
+// SetConfig adds the uploader configuration.
+func (u *ImageUploader) SetConfig(cfg *strategies.UploaderConfig) {
+	u.config = cfg
+}
+
+// GetConfig returns the uploader configuration.
+func (u *ImageUploader) GetConfig() *strategies.UploaderConfig {
+	return u.config
+}
+
+// GetContentTypes returns the uploader allowed content types.
+func (u *ImageUploader) GetContentTypes() utils.ContentTypeMapping {
+	return u.contentTypes
 }
 
 // Validate validates the struct.
@@ -59,21 +72,15 @@ func (u *ImageUploader) Validate(uploadPubSub *views.UploadPubSub) error {
 	return utils.Validate.StructCtx(ctx, uploadPubSub)
 }
 
-// GetConfig returns the uploader configuration
-func (u *ImageUploader) GetConfig() *types.UploaderTypeConfig {
-	return u.Config
-}
-
 // GetLabels returns the image labels.
-func (u *ImageUploader) GetLabels(prefix string) []string {
-	labels, _ := u.Config.AWSRepository.GetImageLabels(prefix)
-
-	return labels
+func (u *ImageUploader) SetLabels(prefix string) {
+	u.config.AWSRepository.GetImageLabels(prefix)
+	// todo: save labels in DynamoDB
 }
 
 // HandleFile handles the image - converts it, etc.
 func (u *ImageUploader) HandleFile(prefix string) (io.ReadCloser, error) {
-	file, err := u.Config.AWSRepository.DownloadFile(prefix)
+	file, err := u.config.AWSRepository.DownloadFile(prefix)
 	if err != nil {
 		return nil, err
 	}
@@ -115,9 +122,9 @@ func (u *ImageUploader) handleImage(buffer []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	for contentType, ext := range ContentTypes {
+	for contentType, ext := range u.contentTypes {
 		if ext == bimg.ImageTypes[imgConvert] {
-			u.Config.UploadView.ContentType = contentType
+			u.config.UploadView.ContentType = contentType
 			break
 		}
 	}
@@ -127,20 +134,20 @@ func (u *ImageUploader) handleImage(buffer []byte) ([]byte, error) {
 
 // Upload uploads the image to S3.
 func (u *ImageUploader) Upload(reader io.ReadCloser) (string, error) {
-	cType := u.Config.UploadView.ContentType
+	cType := u.config.UploadView.ContentType
 	s3Prefix := utils.GetUniquePrefix(
-		u.Config.UploadView.UserId,
-		ContentTypes[cType],
+		u.config.UploadView.UserId,
+		u.contentTypes[cType],
 	)
 
 	var metadata = map[string]string{
-		"user-id":  u.Config.UploadView.UserId,
-		"title":    u.Config.UploadView.Title,
-		"author":   u.Config.UploadView.Author,
-		"filename": u.Config.UploadView.Filename,
+		"user-id":  u.config.UploadView.UserId,
+		"title":    u.config.UploadView.Title,
+		"author":   u.config.UploadView.Author,
+		"filename": u.config.UploadView.Filename,
 	}
 
-	err := u.Config.AWSRepository.UploadChunks(s3Prefix, reader, cType, metadata, nil)
+	err := u.config.AWSRepository.UploadChunks(s3Prefix, reader, cType, metadata, nil)
 	if err != nil {
 		return "", err
 	}
@@ -150,15 +157,15 @@ func (u *ImageUploader) Upload(reader io.ReadCloser) (string, error) {
 
 // UploadTemp uploads the image to S3 with lifecycle.
 func (u *ImageUploader) UploadTemp(reader io.ReadCloser) (string, error) {
-	cType := u.Config.UploadView.ContentType
+	cType := u.config.UploadView.ContentType
 	s3Prefix := utils.GetUniquePrefix(
-		u.Config.UploadView.UserId,
-		ContentTypes[cType],
+		u.config.UploadView.UserId,
+		u.contentTypes[cType],
 	)
 
 	tagging := aws_repository.TempFileRule
 
-	err := u.Config.AWSRepository.PutObject(s3Prefix, reader, cType, nil, &tagging)
+	err := u.config.AWSRepository.PutObject(s3Prefix, reader, cType, nil, &tagging)
 	if err != nil {
 		return "", errors.New("error uploading image to S3")
 	}

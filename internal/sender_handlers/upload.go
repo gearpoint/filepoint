@@ -11,12 +11,11 @@ import (
 	"github.com/ThreeDotsLabs/watermill/pubsub/gochannel"
 	cache_control "github.com/gearpoint/filepoint/internal/cache-control"
 	"github.com/gearpoint/filepoint/internal/uploader"
-	"github.com/gearpoint/filepoint/internal/uploader/types"
+	"github.com/gearpoint/filepoint/internal/uploader/strategies"
 	"github.com/gearpoint/filepoint/internal/views"
 	"github.com/gearpoint/filepoint/pkg/aws_repository"
 	"github.com/gearpoint/filepoint/pkg/logger"
 	"github.com/gearpoint/filepoint/pkg/redis"
-	"github.com/gearpoint/filepoint/pkg/utils"
 	"github.com/gearpoint/filepoint/pkg/watermill"
 	"go.uber.org/zap"
 )
@@ -42,91 +41,87 @@ func NewUploadHandler(awsRepository *aws_repository.AWSRepository, redisReposito
 // ProccessUploadMessages proccess the upload and returns the callback message.
 func (h *UploadHandler) ProccessUploadMessages() message.HandlerFunc {
 	return func(msg *message.Message) ([]*message.Message, error) {
-		msg.SetContext(logger.NewContext(msg.Context(), zap.String("request_id", msg.UUID)))
-		eventType := types.UploaderTypes(msg.Metadata.Get(views.EventType))
+		ctx := logger.NewContext(msg.Context(), zap.String("request_id", msg.UUID))
+		msg.SetContext(ctx)
 
-		for key, typeMapping := range uploader.UploaderTypesMap {
-			if key == eventType {
-				var uploadPubSub = &views.UploadPubSub{}
-				err := json.Unmarshal(msg.Payload, uploadPubSub)
-				if err != nil {
-					logger.WithContext(msg.Context()).Error(err.Error())
-					return nil, err
-				}
+		eventType := strategies.EventTypeKey(msg.Metadata.Get(views.EventType))
 
-				location, labels, err := h.handleUpload(msg, &typeMapping, uploadPubSub)
-				if err != nil {
-					logger.WithContext(msg.Context()).Error(err.Error())
-					return nil, err
-				}
+		logger.WithContext(msg.Context()).Info("processing upload message",
+			zap.Any("eventType", eventType),
+		)
 
-				webhookPayload, err := json.Marshal(views.WebhookPayload{
-					Id:       uploadPubSub.Id,
-					Success:  err == nil,
-					Location: location,
-					Labels:   labels,
-					Error:    "",
-				})
-				if err != nil {
-					logger.WithContext(msg.Context()).Error(err.Error())
-					return nil, err
-				}
-
-				msg.Ack()
-
-				return message.Messages{
-					message.NewMessage(uploadPubSub.Id, webhookPayload),
-				}, nil
-			}
+		uploader, err := uploader.GetUploaderByEventType(eventType)
+		if err == nil {
+			return nil, errors.New("unrecognized event-type")
 		}
 
-		return nil, errors.New("unrecognized event-type")
+		var uploadPubSub = &views.UploadPubSub{}
+		err = json.Unmarshal(msg.Payload, uploadPubSub)
+		if err != nil {
+			logger.WithContext(msg.Context()).Error(err.Error())
+			return nil, err
+		}
+
+		location, err := h.handleUpload(msg, uploader, uploadPubSub)
+		if err != nil {
+			logger.WithContext(msg.Context()).Error(err.Error())
+			return nil, err
+		}
+
+		logger.WithContext(msg.Context()).Info("sending success upload webhook")
+
+		webhookPayload, err := json.Marshal(views.WebhookPayload{
+			Id:       uploadPubSub.Id,
+			Success:  err == nil,
+			Location: location,
+			Error:    "",
+		})
+		if err != nil {
+			logger.WithContext(msg.Context()).Error(err.Error())
+			return nil, err
+		}
+
+		msg.Ack()
+
+		return message.Messages{
+			message.NewMessage(uploadPubSub.Id, webhookPayload),
+		}, nil
 	}
 }
 
 // handleUpload is responsible for uploading the file.
-func (h *UploadHandler) handleUpload(msg *message.Message, uploaderType *types.TypeMapping, uploadPubSub *views.UploadPubSub) (string, []string, error) {
-	uploader := uploader.NewUploader(uploaderType, &types.UploaderTypeConfig{
+func (h *UploadHandler) handleUpload(msg *message.Message, uploader strategies.Uploader, uploadPubSub *views.UploadPubSub) (string, error) {
+	uploader.SetConfig(&strategies.UploaderConfig{
 		UploadView:    uploadPubSub,
 		AWSRepository: h.awsRepository,
 	})
 
 	s3Prefix := msg.Metadata.Get(views.S3Prefix)
-	reader, err := uploader.UploaderType.HandleFile(s3Prefix)
+	reader, err := uploader.HandleFile(s3Prefix)
 	if err != nil {
-		return "", nil, err
-	}
-
-	// todo: multiple img definitions
-	newS3Prefix, err := uploader.UploaderType.Upload(reader)
-	reader.Close()
-
-	if err != nil {
-		return "", nil, err
-	}
-
-	location := newS3Prefix
-	labels := uploader.UploaderType.GetLabels(newS3Prefix)
-	labels = append(
-		labels,
-		utils.Title(msg.Metadata.Get(views.EventType)),
-	)
-
-	tagging := make(map[string]string, len(labels))
-	if len(labels) > 0 {
-		for _, label := range labels {
-			if _, ok := tagging[label]; ok {
-				continue
-			}
-			tagging[label] = ""
-		}
+		return "", err
 	}
 
 	// todo: add to DynamoDB
+	// todo: multiple file definitions
+	// todo: return folder here?
+	newS3Prefix, err := uploader.Upload(reader)
+	reader.Close()
+
+	if err != nil {
+		return "", err
+	}
+
+	uploader.SetLabels(newS3Prefix)
+
+	tagging := map[string]string{
+		"event-type": msg.Metadata.Get(views.EventType),
+	}
 	h.awsRepository.PutObjectTagging(newS3Prefix, tagging)
+
 	h.uploadCacheControl.PrefixesCacheControl.AddKeyToCachedPrefixes(msg.Context(), newS3Prefix)
 
-	return location, labels, nil
+	return newS3Prefix, nil
 }
 
 // SetupUploadMiddlewares returns the specific upload middlewares.
@@ -171,17 +166,20 @@ func (h *UploadHandler) processUploadPoisonQueue(gochannel *gochannel.GoChannel,
 
 // SendUploadErrorWebhook calls the upload webhook with error message.
 func SendUploadErrorWebhook(ctx context.Context, id string, webhookURL string) {
+	ctx = logger.NewContext(ctx, zap.String("request_id", id))
+
 	httpPublisher, err := watermill.NewHttpPublisher()
 	if err != nil {
 		logger.WithContext(ctx).Error("error initializing http publisher", zap.Error(err))
 		return
 	}
 
+	logger.WithContext(ctx).Info("sending error upload webhook")
+
 	payload, err := json.Marshal(views.WebhookPayload{
 		Id:       id,
 		Success:  false,
 		Location: "",
-		Labels:   []string{},
 		Error:    "error uploading file",
 	})
 

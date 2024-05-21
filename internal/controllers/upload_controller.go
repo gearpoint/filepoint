@@ -13,7 +13,7 @@ import (
 	cache_control "github.com/gearpoint/filepoint/internal/cache-control"
 	"github.com/gearpoint/filepoint/internal/sender_handlers"
 	"github.com/gearpoint/filepoint/internal/uploader"
-	"github.com/gearpoint/filepoint/internal/uploader/types"
+	"github.com/gearpoint/filepoint/internal/uploader/strategies"
 	"github.com/gearpoint/filepoint/internal/views"
 	"github.com/gearpoint/filepoint/pkg/aws_repository"
 	http_utils "github.com/gearpoint/filepoint/pkg/http"
@@ -98,7 +98,7 @@ func (u *UploadController) Upload(c *gin.Context) {
 		return
 	}
 
-	eventType, uploaderType, err := uploader.GetTypeByContentType(contentType)
+	eventType, uploader, err := uploader.GetUploaderByContentType(contentType)
 	if err != nil {
 		abortWithBadRequest(c, "error validating file content type", err.Error())
 		return
@@ -116,12 +116,12 @@ func (u *UploadController) Upload(c *gin.Context) {
 		OccurredOn:  time.Now(),
 	}
 
-	uploader := uploader.NewUploader(uploaderType, &types.UploaderTypeConfig{
+	uploader.SetConfig(&strategies.UploaderConfig{
 		UploadView:    uploadPubSub,
 		AWSRepository: u.awsRepository,
 	})
 
-	err = uploader.UploaderType.Validate(uploadPubSub)
+	err = uploader.Validate(uploadPubSub)
 	if err != nil {
 		errSlice := utils.FormatValidatorErrors(err)
 		if errSlice != nil {
@@ -141,18 +141,17 @@ func (u *UploadController) Upload(c *gin.Context) {
 		Id:       "X-Request-Id",
 		Success:  true,
 		Location: "{location}",
-		Labels:   []string{},
 		Error:    "",
 	}))
 	c.Status(http.StatusAccepted)
 }
 
 // uploadWorker makes the upload publish.
-func (u *UploadController) uploadWorker(eventType types.UploaderTypes, uploader *uploader.Uploader, file multipart.File) {
-	cfg := uploader.UploaderType.GetConfig()
+func (u *UploadController) uploadWorker(eventType strategies.EventTypeKey, uploader strategies.Uploader, file multipart.File) {
+	cfg := uploader.GetConfig()
 	ctx := logger.NewContext(context.Background(), zap.String("request_id", cfg.UploadView.Id))
 
-	s3Prefix, err := uploader.UploaderType.UploadTemp(file)
+	s3Prefix, err := uploader.UploadTemp(file)
 	file.Close()
 
 	if err != nil {
@@ -175,6 +174,7 @@ func (u *UploadController) uploadWorker(eventType types.UploaderTypes, uploader 
 		message.Metadata.Set(u.partitionKey, cfg.UploadView.UserId)
 	}
 
+	logger.WithContext(ctx).Info("publishing message to topic", zap.String("topic", u.topic))
 	err = u.publisher.Publish(u.topic, message)
 	if err != nil {
 		logger.WithContext(ctx).Error("error publishing message", zap.Error(err))

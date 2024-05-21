@@ -7,7 +7,9 @@ import (
 	"github.com/go-playground/validator/v10"
 )
 
-const MaxFileSizeKey = "uploadMaxSize"
+type MaxFileSizeType string
+
+const MaxFileSizeKey MaxFileSizeType = "uploadMaxSize"
 
 // Validate is the validator instance.
 var Validate *validator.Validate

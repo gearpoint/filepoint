@@ -31,8 +31,6 @@ const (
 	SignExpiration = 12 * time.Hour
 	// The max number of labels returned.
 	maxRekognitionLabels int32 = 10
-	// Cloudfront private key file location.
-	cloudfrontPrivateKey = ".aws/filepoint-cloudfront.pem"
 )
 
 // The Rekognition unsuported locations.
@@ -64,7 +62,7 @@ func NewAWSRepository(awsConfig *cfg.AWSConfig, ctx context.Context) (*AWSReposi
 	}
 	rekoClient := rekognition.NewFromConfig(sdkConfig)
 
-	rsaKey, err := getPrivateKey(cloudfrontPrivateKey)
+	rsaKey, err := getPrivateKey(awsConfig.CloudfrontCrtFile)
 	if err != nil {
 		return nil, err
 	}

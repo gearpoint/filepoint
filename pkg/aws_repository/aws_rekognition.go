@@ -63,34 +63,34 @@ func (r *AWSRepository) GetImageLabels(prefix string) ([]string, error) {
 
 // StartVideoLabelsDetection starts the video label and moderation detection.
 func (r *AWSRepository) StartVideoLabelsDetection(prefix string) ([]string, error) {
-	// var minConfidence float32 = 97
+	var minConfidence float32 = 97
 
-	// r.rekoClient.StartLabelDetection(r.ctx, &rekognition.StartLabelDetectionInput{
-	// 	Video: &types.Video{
-	// 		S3Object: &types.S3Object{
-	// 			Bucket: &r.config.Bucket,
-	// 			Name:   &prefix,
-	// 		},
-	// 	},
-	// 	MinConfidence: &minConfidence,
-	// 	NotificationChannel: &types.NotificationChannel{
-	// 		RoleArn:     &r.config.RekognitionRole,
-	// 		SNSTopicArn: &r.config.VideoLabelingTopic,
-	// 	},
-	// })
-	// r.rekoClient.StartContentModeration(r.ctx, &rekognition.StartContentModerationInput{
-	// 	Video: &types.Video{
-	// 		S3Object: &types.S3Object{
-	// 			Bucket: &r.config.Bucket,
-	// 			Name:   &prefix,
-	// 		},
-	// 	},
-	// 	MinConfidence: &minConfidence,
-	// 	NotificationChannel: &types.NotificationChannel{
-	// 		RoleArn:     &r.config.RekognitionRole,
-	// 		SNSTopicArn: &r.config.VideoLabelingTopic,
-	// 	},
-	// })
+	r.rekoClient.StartLabelDetection(r.ctx, &rekognition.StartLabelDetectionInput{
+		Video: &types.Video{
+			S3Object: &types.S3Object{
+				Bucket: &r.config.Bucket,
+				Name:   &prefix,
+			},
+		},
+		MinConfidence: &minConfidence,
+		NotificationChannel: &types.NotificationChannel{
+			RoleArn:     &r.config.RekognitionRole,
+			SNSTopicArn: &r.config.VideoLabelingTopic,
+		},
+	})
+	r.rekoClient.StartContentModeration(r.ctx, &rekognition.StartContentModerationInput{
+		Video: &types.Video{
+			S3Object: &types.S3Object{
+				Bucket: &r.config.Bucket,
+				Name:   &prefix,
+			},
+		},
+		MinConfidence: &minConfidence,
+		NotificationChannel: &types.NotificationChannel{
+			RoleArn:     &r.config.RekognitionRole,
+			SNSTopicArn: &r.config.VideoLabelingTopic,
+		},
+	})
 
 	return nil, nil
 }
