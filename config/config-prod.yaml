@@ -13,19 +13,20 @@ Routes:
 AWSConfig:
   Bucket: "filepoint-us"
   Region: "us-east-1"
+  CludfrontCrtFile: ".aws/filepoint-cloudfront.pem"
   CloudfrontDist: "https://files.gearpoint.club"
   VideoLabelingTopic: "arn:aws:sns:sa-east-1:029272547936:filepoint-video-labeling"
   RekognitionRole: "arn:aws:iam::526264782134:role/filepoint-rekognition-access"
 
-KafkaConfig:
-  Brokers:
-    - "localhost:9094"
+StreamingConfig:
   MessagesPerSecond: 100
-  MaxMessageBytes: 1048576
-  MaxRetries: 10
-
-SQSConfig:
-  AWSRegion: "us-east-1"
+  KafkaConfig:
+    Brokers:
+      - "localhost:9094"
+    MaxMessageBytes: 1048576
+    MaxRetries: 10
+  SQSConfig:
+    AWSRegion: "us-east-1"
 
 RedisConfig:
   Addr: "prod-elasticache.7g46gm.clustercfg.use1.cache.amazonaws.com:6379"

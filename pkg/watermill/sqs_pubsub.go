@@ -6,6 +6,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/gearpoint/filepoint/config"
 	"github.com/gearpoint/filepoint/pkg/logger"
+	"go.uber.org/zap"
 )
 
 func getAWSConfig(sqsConfig *config.SQSConfig) aws.Config {
@@ -28,6 +29,12 @@ func NewSQSPublisher(sqsConfig *config.SQSConfig) (message.Publisher, error) {
 		NewZapLoggerAdapter(logger.Logger),
 	)
 
+	if err == nil {
+		logger.Info("SQS publisher connected successfully",
+			zap.Any("region", sqsConfig.AWSRegion),
+		)
+	}
+
 	return publisher, err
 }
 
@@ -44,6 +51,12 @@ func NewSQSSubscriber(sqsConfig *config.SQSConfig) (message.Subscriber, error) {
 		subscriberCfg,
 		NewZapLoggerAdapter(logger.Logger),
 	)
+
+	if err == nil {
+		logger.Info("SQS subscriber connected successfully",
+			zap.Any("region", sqsConfig.AWSRegion),
+		)
+	}
 
 	return subscriber, err
 }

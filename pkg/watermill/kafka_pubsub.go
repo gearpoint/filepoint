@@ -5,6 +5,7 @@ import (
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/gearpoint/filepoint/config"
 	"github.com/gearpoint/filepoint/pkg/logger"
+	"go.uber.org/zap"
 )
 
 const (
@@ -22,13 +23,19 @@ func NewKafkaPublisher(kafkaConfig *config.KafkaConfig) (message.Publisher, erro
 		Brokers:               kafkaConfig.Brokers,
 		Marshaler:             getKafkaMarshaler(),
 		OverwriteSaramaConfig: saramaCfg,
-		Tracer:                nil, // todo: verify otel
+		Tracer:                nil,
 	}
 
 	publisher, err := kafka.NewPublisher(
 		publisherCfg,
 		NewZapLoggerAdapter(logger.Logger),
 	)
+
+	if err == nil {
+		logger.Info("Kafka publisher connected successfully",
+			zap.Any("brokers", kafkaConfig.Brokers),
+		)
+	}
 
 	return publisher, err
 }
@@ -42,13 +49,19 @@ func NewKafkaSubscriber(kafkaConfig *config.KafkaConfig) (message.Subscriber, er
 		Brokers:               kafkaConfig.Brokers,
 		Unmarshaler:           getKafkaMarshaler(),
 		OverwriteSaramaConfig: saramaCfg,
-		Tracer:                nil, // todo: verify otel
+		Tracer:                nil,
 	}
 
 	subscriber, err := kafka.NewSubscriber(
 		subscriberCfg,
 		NewZapLoggerAdapter(logger.Logger),
 	)
+
+	if err == nil {
+		logger.Info("Kafka subscriber connected successfully",
+			zap.Any("brokers", kafkaConfig.Brokers),
+		)
+	}
 
 	return subscriber, err
 }

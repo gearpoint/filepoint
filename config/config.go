@@ -16,12 +16,11 @@ const (
 
 // Config is the app main config struct.
 type Config struct {
-	Server      ServerConfig
-	Routes      Routes
-	AWSConfig   AWSConfig
-	KafkaConfig KafkaConfig
-	SQSConfig   SQSConfig
-	RedisConfig RedisConfig
+	Server          ServerConfig
+	Routes          Routes
+	AWSConfig       AWSConfig
+	StreamingConfig StreamingConfig
+	RedisConfig     RedisConfig
 }
 
 // ServerConfig is the server configuration struct.
@@ -43,24 +42,29 @@ type RouteConfig struct {
 // Routes defines the available routes.
 type Routes map[Route]RouteConfig
 
-// AWSConfig config is the AWS configuration.
+// AWSConfig is the AWS configuration.
 type AWSConfig struct {
 	Bucket             string
 	Region             string
+	CloudfrontCrtFile  string
 	CloudfrontDist     string
 	CloudfrontKeyId    string
 	VideoLabelingTopic string
 	RekognitionRole    string
 }
 
-// todo: fix messaging config
+// StreamingConfig contains the app streaming services configuration.
+type StreamingConfig struct {
+	MessagesPerSecond int64
+	KafkaConfig       KafkaConfig
+	SQSConfig         SQSConfig
+}
 
 // KafkaConfig is the Kafka producer configuration.
 type KafkaConfig struct {
-	Brokers           []string
-	MessagesPerSecond int64
-	MaxMessageBytes   int
-	MaxRetries        int
+	Brokers         []string
+	MaxRetries      int
+	MaxMessageBytes int
 }
 
 // SQSConfig is the SQS producer configuration.

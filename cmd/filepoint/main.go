@@ -120,21 +120,11 @@ func setUpPublisher(cfg *config.Config) (message.Publisher, string) {
 
 	switch utils.GetPubSubType() {
 	case utils.Kafka:
-		publisher, err = watermill.NewKafkaPublisher(&cfg.KafkaConfig)
-		if err == nil {
-			logger.Info("Kafka publisher connected successfully",
-				zap.Any("brokers", cfg.KafkaConfig.Brokers),
-			)
-		}
+		publisher, err = watermill.NewKafkaPublisher(&cfg.StreamingConfig.KafkaConfig)
 	case utils.SQS:
-		publisher, err = watermill.NewSQSPublisher(&cfg.SQSConfig)
-		if err == nil {
-			logger.Info("SQS publisher connected successfully",
-				zap.Any("region", cfg.SQSConfig.AWSRegion),
-			)
-		}
+		publisher, err = watermill.NewSQSPublisher(&cfg.StreamingConfig.SQSConfig)
 	default:
-		log.Fatal("error initializing the publisher")
+		log.Fatal("error initializing the publisher - unrecognized pubsub")
 	}
 
 	if err != nil {

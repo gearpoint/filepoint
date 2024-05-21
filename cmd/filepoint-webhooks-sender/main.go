@@ -99,7 +99,7 @@ func setupRouter(cfg *config.Config) {
 	defer router.Close()
 
 	throttleMiddleware := middleware.NewThrottle(
-		cfg.KafkaConfig.MessagesPerSecond, // todo: fix messaging config
+		cfg.StreamingConfig.MessagesPerSecond,
 		time.Second,
 	)
 
@@ -162,21 +162,11 @@ func setUpPubSub(cfg *config.Config) (message.Publisher, message.Subscriber) {
 
 	switch utils.GetPubSubType() {
 	case utils.Kafka:
-		subscriber, err = watermill.NewKafkaSubscriber(&cfg.KafkaConfig)
-		if err == nil {
-			logger.Info("Kafka subscriber connected successfully",
-				zap.Any("brokers", cfg.KafkaConfig.Brokers),
-			)
-		}
+		subscriber, err = watermill.NewKafkaSubscriber(&cfg.StreamingConfig.KafkaConfig)
 	case utils.SQS:
-		subscriber, err = watermill.NewSQSSubscriber(&cfg.SQSConfig)
-		if err == nil {
-			logger.Info("SQS subscriber connected successfully",
-				zap.Any("region", cfg.SQSConfig.AWSRegion),
-			)
-		}
+		subscriber, err = watermill.NewSQSSubscriber(&cfg.StreamingConfig.SQSConfig)
 	default:
-		log.Fatal("error initializing the subscriber")
+		log.Fatal("error initializing the subscriber - unrecognized pubsub")
 	}
 
 	if err != nil {
