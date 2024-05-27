@@ -43,6 +43,13 @@ First of all, set the environment file:
 cp .env.example .env
 ```
 
+Then, you need to setup [LocalStack](https://www.localstack.cloud/):
+
+```sh
+python3 -m pip install localstack
+pip install awscli-local
+```
+
 ### Running in Go
 
 To run the project with go, use the following command:
@@ -54,6 +61,11 @@ make run
 # Filepoint webhooks provider
 make run-webhooks-provider
 ```
+
+Pay attention that you must have the following services running:
+
+- Redis
+- LocalStack
 
 ### The binary
 
@@ -87,9 +99,11 @@ You can check it in the [docs](https://docs.aws.amazon.com/AmazonCloudFront/late
 
 The key must be in the ```.aws``` folder.
 
-## Container Registry
+> Local setups don't need signed URLs.
 
-AWS ECR is being used as the Container Registry
+## Setting up the Container Registry
+
+AWS ECR is being used as the Container Registry.
 
 ### Configuring
 

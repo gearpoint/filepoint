@@ -35,8 +35,11 @@ type ServerConfig struct {
 
 // Route config is the routes configuration.
 type RouteConfig struct {
-	Topic      string
-	WebhookURL string
+	TableName   string
+	Topic       string
+	PoisonTopic string
+	WebhookURL  string
+	MaxRetries  int
 }
 
 // Routes defines the available routes.
@@ -44,6 +47,8 @@ type Routes map[Route]RouteConfig
 
 // AWSConfig is the AWS configuration.
 type AWSConfig struct {
+	// Endpoint defines the AWS base URL where SDK will make API calls to. If empty will be resolved with the default URL.
+	Endpoint           string
 	Bucket             string
 	Region             string
 	CloudfrontCrtFile  string
@@ -57,7 +62,6 @@ type AWSConfig struct {
 type StreamingConfig struct {
 	MessagesPerSecond int64
 	KafkaConfig       KafkaConfig
-	SQSConfig         SQSConfig
 }
 
 // KafkaConfig is the Kafka producer configuration.
@@ -65,11 +69,6 @@ type KafkaConfig struct {
 	Brokers         []string
 	MaxRetries      int
 	MaxMessageBytes int
-}
-
-// SQSConfig is the SQS producer configuration.
-type SQSConfig struct {
-	AWSRegion string
 }
 
 // RedisConfig config is the Redis configuration.

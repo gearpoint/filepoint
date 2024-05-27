@@ -36,7 +36,7 @@ func main() {
 
 	logger.Info("starting Filepoint server...")
 
-	flag.StringVar(&configFile, "config", "./config/config-local.yaml", "aaa")
+	flag.StringVar(&configFile, "config", "./config/config.yaml", "aaa")
 	flag.Parse()
 
 	cfg := getCfg(configFile)
@@ -113,17 +113,17 @@ func setupRouter(cfg *config.Config) {
 	for routeName, routeConfig := range cfg.Routes {
 		switch routeName {
 		case config.Upload:
-			webhookURL := cfg.Routes[routeName].WebhookURL
-			upload := sender_handlers.NewUploadHandler(awsRepository, redisRepository, webhookURL)
+			routeCfg := cfg.Routes[routeName]
+			upload_sender := sender_handlers.NewUploadHandler(awsRepository, redisRepository, routeCfg)
 			uploadHandler := router.AddHandler(
 				string(routeName),
 				routeConfig.Topic,
 				subscriber,
-				webhookURL,
+				routeCfg.WebhookURL,
 				publisher,
-				upload.ProccessUploadMessages(),
+				upload_sender.ProccessUploadMessages(),
 			)
-			uploadHandler.AddMiddleware(upload.SetupUploadMiddlewares()...)
+			uploadHandler.AddMiddleware(upload_sender.SetupUploadMiddlewares()...)
 		default:
 			logger.Warn("no config found for provided route",
 				zap.Any("route_name", routeName),
@@ -164,7 +164,7 @@ func setUpPubSub(cfg *config.Config) (message.Publisher, message.Subscriber) {
 	case utils.Kafka:
 		subscriber, err = watermill.NewKafkaSubscriber(&cfg.StreamingConfig.KafkaConfig)
 	case utils.SQS:
-		subscriber, err = watermill.NewSQSSubscriber(&cfg.StreamingConfig.SQSConfig)
+		subscriber, err = watermill.NewSQSSubscriber(&cfg.AWSConfig)
 	default:
 		log.Fatal("error initializing the subscriber - unrecognized pubsub")
 	}

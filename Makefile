@@ -8,13 +8,14 @@ endif
 
 default: clean test build-local
 
+# Running outside a container requires extra config. Checkout readme for more info.
 .PHONY: run
 run:
-	go run cmd/filepoint/main.go
+	go run cmd/filepoint/main.go -config config/config-local.yaml
 
 .PHONY: run-webhooks-sender
 run-webhooks-sender:
-	go run cmd/filepoint-webhooks-sender/main.go
+	go run cmd/filepoint-webhooks-sender/main.go -config config/config-local.yaml
 
 .PHONY: deps
 deps:
@@ -64,7 +65,7 @@ build-base:
 
 # The configuration file to be used.
 # Important: if you pretend to use it in a Docker container for development,
-# you can set this as a volume or build this with "config-docker" instead.
+# you can set this as a volume or build this with ""config/config.yaml" instead.
 CONFIG_FILE = "config/config-prod.yaml"
 
 # TAG controls the image tagging.

@@ -39,7 +39,7 @@ func main() {
 
 	logger.Info("starting Filepoint server...")
 
-	flag.StringVar(&configFile, "config", "./config/config-local.yaml", "aaa")
+	flag.StringVar(&configFile, "config", "./config/config.yaml", "aaa")
 	flag.Parse()
 
 	cfg := getCfg(configFile)
@@ -116,13 +116,13 @@ func getCfg(configFile string) *config.Config {
 func setUpPublisher(cfg *config.Config) (message.Publisher, string) {
 	var err error
 	var publisher message.Publisher
-	var partitionKey string
+	var partitionKey string // todo: check partitionKey
 
 	switch utils.GetPubSubType() {
 	case utils.Kafka:
 		publisher, err = watermill.NewKafkaPublisher(&cfg.StreamingConfig.KafkaConfig)
 	case utils.SQS:
-		publisher, err = watermill.NewSQSPublisher(&cfg.StreamingConfig.SQSConfig)
+		publisher, err = watermill.NewSQSPublisher(&cfg.AWSConfig)
 	default:
 		log.Fatal("error initializing the publisher - unrecognized pubsub")
 	}

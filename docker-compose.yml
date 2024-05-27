@@ -1,4 +1,3 @@
-version: "3.9"
 services:
   redis:
     image: redis:7.0.4-alpine
@@ -10,9 +9,9 @@ services:
     image: "filepoint"
     container_name: filepoint
     restart: unless-stopped
-    depends_on:
-      kafka:
-        condition: service_healthy
+    # depends_on:
+    #   kafka:
+    #     condition: service_healthy
     ports:
      - "${FILEPOINT_ADDR}:${FILEPOINT_ADDR}"
     build:
@@ -20,20 +19,45 @@ services:
       dockerfile: ./build/package/docker/Dockerfile
       args:
         - BINARY_NAME=filepoint
-        - CONFIG_FILE=./config/config-docker.yaml
+        - CONFIG_FILE=./config/config.yaml
+        - REPOSITORY=${REPOSITORY}
     volumes:
       - ./config:/app/config
   filepoint-webhooks-sender:
     image: "filepoint-webhooks-sender"
     container_name: filepoint-webhooks-sender
     restart: unless-stopped
-    depends_on:
-      kafka:
-        condition: service_healthy
+    # depends_on:
+    #   kafka:
+    #     condition: service_healthy
     build:
       context: .
       dockerfile: ./build/package/docker/Dockerfile
       args:
         - BINARY_NAME=filepoint-webhooks-sender
+        - CONFIG_FILE=./config/config.yaml
+        - REPOSITORY=${REPOSITORY}
     volumes:
       - ./config:/app/config
+  localstack:
+    container_name: localstack
+    image: localstack/localstack
+    healthcheck:
+      test: [
+        "CMD",
+        "awslocal dynamodb list-tables",
+        "awslocal s3 ls",
+        "awslocal sns list-topics",
+        "awslocal sqs list-topics"
+      ]
+      interval: 3s
+      timeout: 10s
+    environment:
+      - AWS_DEFAULT_REGION=us-east-1
+      - LOCALSTACK_HOST=localhost
+      - DOCKER_HOST=unix:///var/run/docker.sock
+      - SERVICES=dynamodb,s3,sns,sqs
+    ports:
+      - "4566:4566"
+    volumes:
+      - "scripts/init-aws.sh:/etc/localstack/init/ready.d/init-aws.sh"
