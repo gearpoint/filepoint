@@ -9,15 +9,16 @@ import (
 	"go.uber.org/zap"
 )
 
-func getAWSConfig(sqsConfig *config.SQSConfig) aws.Config {
+func getAWSConfig(awsConfig *config.AWSConfig) aws.Config {
 	return aws.Config{
-		Region: &sqsConfig.AWSRegion,
+		Endpoint: &awsConfig.Endpoint,
+		Region:   &awsConfig.Region,
 	}
 }
 
 // NewSQSPublisher creates a Publisher.
-func NewSQSPublisher(sqsConfig *config.SQSConfig) (message.Publisher, error) {
-	cfg := getAWSConfig(sqsConfig)
+func NewSQSPublisher(awsConfig *config.AWSConfig) (message.Publisher, error) {
+	cfg := getAWSConfig(awsConfig)
 
 	publisherCfg := sqs.PublisherConfig{
 		AWSConfig: cfg,
@@ -31,7 +32,7 @@ func NewSQSPublisher(sqsConfig *config.SQSConfig) (message.Publisher, error) {
 
 	if err == nil {
 		logger.Info("SQS publisher connected successfully",
-			zap.Any("region", sqsConfig.AWSRegion),
+			zap.Any("region", awsConfig.Region),
 		)
 	}
 
@@ -39,8 +40,8 @@ func NewSQSPublisher(sqsConfig *config.SQSConfig) (message.Publisher, error) {
 }
 
 // NewSQSSubscriber creates a Subscriber.
-func NewSQSSubscriber(sqsConfig *config.SQSConfig) (message.Subscriber, error) {
-	cfg := getAWSConfig(sqsConfig)
+func NewSQSSubscriber(awsConfig *config.AWSConfig) (message.Subscriber, error) {
+	cfg := getAWSConfig(awsConfig)
 
 	subscriberCfg := sqs.SubscriberConfig{
 		AWSConfig:   cfg,
@@ -54,7 +55,7 @@ func NewSQSSubscriber(sqsConfig *config.SQSConfig) (message.Subscriber, error) {
 
 	if err == nil {
 		logger.Info("SQS subscriber connected successfully",
-			zap.Any("region", sqsConfig.AWSRegion),
+			zap.Any("region", awsConfig.Region),
 		)
 	}
 

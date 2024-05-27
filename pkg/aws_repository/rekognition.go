@@ -3,10 +3,23 @@ package aws_repository
 import (
 	"github.com/aws/aws-sdk-go-v2/service/rekognition"
 	"github.com/aws/aws-sdk-go-v2/service/rekognition/types"
+	"go.uber.org/zap"
+
+	"github.com/gearpoint/filepoint/pkg/logger"
+	"github.com/gearpoint/filepoint/pkg/utils"
+)
+
+const (
+	// The max number of labels returned.
+	maxRekognitionLabels int32 = 10
 )
 
 // GetImageLabels returns the image labels. Suports only JPEG and PNG, up to 15MB.
-func (r *AWSRepository) GetImageLabels(prefix string) ([]string, error) {
+func (r *AWSRepository) GetImageLabels(prefix string) error {
+	if utils.IsDevEnvironment() {
+		return nil
+	}
+
 	var minConfidence float32 = 97
 	var maxLabels = maxRekognitionLabels
 	var labels []string
@@ -22,7 +35,7 @@ func (r *AWSRepository) GetImageLabels(prefix string) ([]string, error) {
 		MinConfidence: &minConfidence,
 	})
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	for _, label := range result.Labels {
@@ -58,11 +71,17 @@ func (r *AWSRepository) GetImageLabels(prefix string) ([]string, error) {
 		}
 	}
 
-	return labels, err
+	logger.Info("Done labelling image", zap.Any("labels", labels))
+
+	return err
 }
 
 // StartVideoLabelsDetection starts the video label and moderation detection.
-func (r *AWSRepository) StartVideoLabelsDetection(prefix string) ([]string, error) {
+func (r *AWSRepository) StartVideoLabelsDetection(prefix string) error {
+	if utils.IsDevEnvironment() {
+		return nil
+	}
+
 	var minConfidence float32 = 97
 
 	r.rekoClient.StartLabelDetection(r.ctx, &rekognition.StartLabelDetectionInput{
@@ -92,5 +111,5 @@ func (r *AWSRepository) StartVideoLabelsDetection(prefix string) ([]string, erro
 		},
 	})
 
-	return nil, nil
+	return nil
 }

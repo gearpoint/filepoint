@@ -10,9 +10,9 @@ import (
 	"github.com/gearpoint/filepoint/pkg/utils"
 )
 
-type InitUploader func() strategies.Uploader
+type initUploader func() strategies.Uploader
 
-var uploadersMap = map[strategies.EventTypeKey]InitUploader{
+var uploadersMap = map[strategies.EventTypeKey]initUploader{
 	file_type.Key:  file_type.NewUploader,
 	image_type.Key: image_type.NewUploader,
 	video_type.Key: video_type.NewUploader,

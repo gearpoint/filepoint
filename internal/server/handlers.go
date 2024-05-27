@@ -25,12 +25,10 @@ func (s *Server) MapHandlers() error {
 
 	upload := v1.Group(string(config.Upload))
 	{
-		webhookURL := s.routes[config.Upload].WebhookURL
 		uploadController := controllers.NewUploadController(
 			&controllers.UploadConfig{
-				Topic:           s.routes[config.Upload].Topic,
+				RouteConfig:     s.routes[config.Upload],
 				PartitionKey:    s.partitionKey,
-				WebhookURL:      webhookURL,
 				Publisher:       s.publisher,
 				AWSRepository:   s.awsRepository,
 				RedisRepository: s.redisRepository,

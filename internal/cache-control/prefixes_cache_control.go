@@ -12,6 +12,8 @@ import (
 )
 
 // PrefixesCacheControl is the prefixes cache control type.
+// It is used to control any S3 folder listed prefixes. The prefixes will be available without
+// the need to call AWS API.
 type PrefixesCacheControl struct {
 	cacheFormat     []string
 	timeToLive      time.Duration
@@ -55,12 +57,18 @@ func (c *PrefixesCacheControl) Add(ctx context.Context, prefixesKey string, cach
 }
 
 // AddKeyToCachedPrefixes adds the new key to the cached prefixes.
+// It's useful when a new prefix is added to a S3 folder that is already cached.
+// The new prefix will be available without the need to refresh the cache.
 func (c *PrefixesCacheControl) AddKeyToCachedPrefixes(ctx context.Context, prefix string) {
 	if utils.CheckPrefixIsFolder(prefix) {
 		return
 	}
 
 	prefixesKey := utils.GetPrefixFolder(prefix)
+	if prefixesKey == "" {
+		return
+	}
+
 	if !c.redisRepository.Exists(ctx, prefixesKey) {
 		return
 	}
@@ -82,7 +90,7 @@ func (c *PrefixesCacheControl) AddKeyToCachedPrefixes(ctx context.Context, prefi
 	c.redisRepository.SetAny(ctx, prefixesKey, newSliceBytes, duration)
 }
 
-// Del deletes the prefixes from cache.
+// Del deletes the folder prefixes from cache.
 func (c *PrefixesCacheControl) Del(ctx context.Context, prefixesKey string) {
 	c.redisRepository.Del(ctx, prefixesKey)
 }

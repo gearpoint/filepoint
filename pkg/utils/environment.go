@@ -65,6 +65,11 @@ func GetEnvironmentType() EnvironmentType {
 	}
 }
 
+// IsDevEnvironment checks if it's a development environment (local).
+func IsDevEnvironment() bool {
+	return GetEnvironmentType() == Development
+}
+
 // GetPubSubType returns the app pub/sub.
 func GetPubSubType() PubSubType {
 	envType := GetEnv(PubSubKey)

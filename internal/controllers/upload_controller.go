@@ -6,10 +6,12 @@ import (
 	"fmt"
 	"mime/multipart"
 	"net/http"
+	"strconv"
 	"sync"
 	"time"
 
 	"github.com/ThreeDotsLabs/watermill/message"
+	"github.com/gearpoint/filepoint/config"
 	cache_control "github.com/gearpoint/filepoint/internal/cache-control"
 	"github.com/gearpoint/filepoint/internal/sender_handlers"
 	"github.com/gearpoint/filepoint/internal/uploader"
@@ -31,9 +33,8 @@ const (
 
 // UploadConfig contains the upload controller config.
 type UploadConfig struct {
-	Topic           string
+	RouteConfig     config.RouteConfig
 	PartitionKey    string
-	WebhookURL      string
 	Publisher       message.Publisher
 	AWSRepository   *aws_repository.AWSRepository
 	RedisRepository *redis.RedisRepository
@@ -41,9 +42,10 @@ type UploadConfig struct {
 
 // UploadController is the controller for the upload route methods.
 type UploadController struct {
+	tableName     string
 	topic         string
-	partitionKey  string
 	webhookURL    string
+	partitionKey  string
 	publisher     message.Publisher
 	awsRepository *aws_repository.AWSRepository
 	cacheControl  *cache_control.UploadCacheControl
@@ -52,9 +54,10 @@ type UploadController struct {
 // NewUploadController returns a new UploadService instance.
 func NewUploadController(cfg *UploadConfig) *UploadController {
 	return &UploadController{
-		topic:         cfg.Topic,
+		tableName:     cfg.RouteConfig.TableName,
+		topic:         cfg.RouteConfig.Topic,
+		webhookURL:    cfg.RouteConfig.WebhookURL,
 		partitionKey:  cfg.PartitionKey,
-		webhookURL:    cfg.WebhookURL,
 		publisher:     cfg.Publisher,
 		awsRepository: cfg.AWSRepository,
 		cacheControl:  cache_control.NewUploadCacheControl(cfg.RedisRepository),
@@ -74,7 +77,7 @@ func NewUploadController(cfg *UploadConfig) *UploadController {
 // @Param content formData file true "File to be uploaded"
 // @Produce json
 // @Success 202
-// @Header 202 {object} Webhook-Request-Body "views.WebhookPayload{Id:"X-Request-Id", Success:true, Location:"{location}", Labels:[]string{}, Error:""}"
+// @Header 202 {object} Webhook-Request-Body "views.WebhookPayload{Id:"X-Request-Id", Success:true, CorrelationId:"", Location:"{location}", Error:""}"
 // @Failure 400 {object} http_utils.RestError
 // @Failure 500
 // @Header all {string} X-Request-Id "Request ID (UUID)"
@@ -105,20 +108,29 @@ func (u *UploadController) Upload(c *gin.Context) {
 	}
 
 	uploadPubSub := &views.UploadPubSub{
-		Id:          http_utils.GetRequestId(c),
-		UserId:      requestBody.UserId,
-		Author:      requestBody.Author,
-		Title:       requestBody.Title,
-		Filename:    fileHeader.Filename,
-		ContentType: contentType,
-		Size:        fileHeader.Size,
-		IpAddress:   http_utils.GetIPAddress(c),
-		OccurredOn:  time.Now(),
+		Id:            http_utils.GetRequestId(c),
+		UserId:        requestBody.UserId,
+		Author:        requestBody.Author,
+		Title:         requestBody.Title,
+		CorrelationId: requestBody.CorrelationId,
+		Filename:      fileHeader.Filename,
+		ContentType:   contentType,
+		Size:          fileHeader.Size,
+		IpAddress:     http_utils.GetIPAddress(c),
+		OccurredOn:    time.Now(),
+	}
+
+	dynamoDBSchema := views.DynamoDBUploadSchema{
+		UserId:        uploadPubSub.UserId,
+		Prefix:        utils.GetUniquePrefix(uploadPubSub.UserId),
+		RequestId:     uploadPubSub.Id,
+		CorrelationId: uploadPubSub.CorrelationId,
 	}
 
 	uploader.SetConfig(&strategies.UploaderConfig{
 		UploadView:    uploadPubSub,
 		AWSRepository: u.awsRepository,
+		Prefix:        dynamoDBSchema.Prefix,
 	})
 
 	err = uploader.Validate(uploadPubSub)
@@ -135,13 +147,20 @@ func (u *UploadController) Upload(c *gin.Context) {
 		abortWithBadRequest(c, "error reading file", err.Error())
 	}
 
+	err = u.awsRepository.AddTableRow(u.tableName, dynamoDBSchema)
+	if err != nil {
+		abortWithBadRequest(c, "error saving file information", err.Error())
+	}
+
 	go u.uploadWorker(eventType, uploader, file)
 
+	// Returns the schema of the webhook content.
 	c.Header("Webhook-Request-Body", fmt.Sprintf("%#v", views.WebhookPayload{
-		Id:       "X-Request-Id",
-		Success:  true,
-		Location: "{location}",
-		Error:    "",
+		Id:            "X-Request-Id",
+		Success:       true,
+		CorrelationId: "",
+		Location:      "{location}",
+		Error:         "",
 	}))
 	c.Status(http.StatusAccepted)
 }
@@ -150,35 +169,38 @@ func (u *UploadController) Upload(c *gin.Context) {
 func (u *UploadController) uploadWorker(eventType strategies.EventTypeKey, uploader strategies.Uploader, file multipart.File) {
 	cfg := uploader.GetConfig()
 	ctx := logger.NewContext(context.Background(), zap.String("request_id", cfg.UploadView.Id))
+	logger := logger.WithContext(ctx)
 
-	s3Prefix, err := uploader.UploadTemp(file)
+	tempObjectPrefix, err := uploader.UploadTemp(file)
 	file.Close()
 
 	if err != nil {
-		logger.WithContext(ctx).Error("error saving temp file", zap.Error(err))
-		sender_handlers.SendUploadErrorWebhook(ctx, cfg.UploadView.Id, u.webhookURL)
+		logger.Error("error saving temp file", zap.Error(err))
+		sender_handlers.SendUploadErrorWebhook(ctx, cfg.UploadView, u.webhookURL)
 		return
 	}
 
 	payload, err := json.Marshal(cfg.UploadView)
 	if err != nil {
-		logger.WithContext(ctx).Error("cannot marshal message", zap.Error(err))
-		sender_handlers.SendUploadErrorWebhook(ctx, cfg.UploadView.Id, u.webhookURL)
+		logger.Error("cannot marshal message", zap.Error(err))
+		sender_handlers.SendUploadErrorWebhook(ctx, cfg.UploadView, u.webhookURL)
 		return
 	}
 
 	message := message.NewMessage(cfg.UploadView.Id, payload)
 	message.Metadata.Set(views.EventType, string(eventType))
-	message.Metadata.Set(views.S3Prefix, s3Prefix)
+	message.Metadata.Set(views.S3Prefix, cfg.Prefix)
+	message.Metadata.Set(views.TempObjectPrefix, tempObjectPrefix)
+
 	if u.partitionKey != "" {
 		message.Metadata.Set(u.partitionKey, cfg.UploadView.UserId)
 	}
 
-	logger.WithContext(ctx).Info("publishing message to topic", zap.String("topic", u.topic))
+	logger.Info("publishing message to topic", zap.String("topic", u.topic))
 	err = u.publisher.Publish(u.topic, message)
 	if err != nil {
-		logger.WithContext(ctx).Error("error publishing message", zap.Error(err))
-		sender_handlers.SendUploadErrorWebhook(ctx, cfg.UploadView.Id, u.webhookURL)
+		logger.Error("error publishing message", zap.Error(err))
+		sender_handlers.SendUploadErrorWebhook(ctx, cfg.UploadView, u.webhookURL)
 		return
 	}
 }
@@ -187,7 +209,8 @@ func (u *UploadController) uploadWorker(eventType strategies.EventTypeKey, uploa
 // @Summary Get file URL
 // @Description Returns the file signed URL
 // @Tags Upload
-// @Param prefix query string true "File prefix"
+// @Param prefix query string true "File folder prefix"
+// @Param definition query utils.FileDefinitions false "File definition config"
 // @Produce json
 // @Success 200 {object} views.GetSignedURLResponse
 // @Failure 400 {object} http_utils.RestError
@@ -200,6 +223,30 @@ func (u *UploadController) GetSignedURL(c *gin.Context) {
 		abortWithBadRequest(c, "the file prefix is required", "you must provide a valid file prefix")
 		return
 	}
+
+	var definition utils.FileDefinitions = utils.MediumDef
+
+	iDefinition, err := strconv.Atoi(c.Request.URL.Query().Get("definition"))
+	if err == nil {
+		definition = utils.FileDefinitions(iDefinition)
+	}
+
+	schema := &views.DynamoDBUploadSchema{
+		UserId: utils.GetPrefixFolder(prefix),
+		Prefix: prefix,
+	}
+
+	err = u.awsRepository.GetTableRow(u.tableName, schema)
+	if err != nil {
+		logger.Error("error retrieving prefix info",
+			zap.Any("prefix", prefix),
+			zap.Error(err),
+		)
+		abortWithBadRequest(c, "error retrieving prefix info")
+		return
+	}
+
+	prefix = utils.CreatePrefix(prefix, schema.DefinitionsMap[definition])
 
 	cached, err := u.cacheControl.SignedURLCacheControl.GetBytes(c, prefix)
 	if err == nil {
@@ -235,7 +282,7 @@ func (u *UploadController) GetSignedURL(c *gin.Context) {
 }
 
 // Upload godoc
-// @Summary List files URLs
+// @Summary List files URLs from a folder
 // @Description Returns the files signed URLs
 // @Tags Upload
 // @Param prefix query string true "Folder prefix"
@@ -252,12 +299,7 @@ func (u *UploadController) ListFolder(c *gin.Context) {
 		return
 	}
 
-	prefixes, err := u.getFolderPrefixes(c, prefix)
-	if err != nil {
-		abortWithBadRequest(c, "error listing prefixes", err.Error())
-		return
-	}
-
+	prefixes := u.getFolderPrefixesFullDepth(c, prefix)
 	response := u.listPrefixes(c, prefixes)
 
 	c.JSON(http.StatusOK, response)
@@ -268,7 +310,8 @@ func (u *UploadController) ListFolder(c *gin.Context) {
 // @Description Returns the files signed URLs
 // @Tags Upload
 // @Accept json
-// @Param prefixes body views.ListObjectsRequest true "prefixes"
+// @Param prefixes body views.ListObjectsRequest.Prefixes true "Folder prefixes"
+// @Param definition body views.ListObjectsRequest.Definition false "File definition config"
 // @Produce json
 // @Success 200 {object} []views.ListSignedURLResponse
 // @Failure 400 {object} http_utils.RestError
@@ -283,24 +326,70 @@ func (u *UploadController) ListObjects(c *gin.Context) {
 		return
 	}
 
+	// todo: get file definition config
+
 	response := u.listPrefixes(c, request.Prefixes)
 
 	c.JSON(http.StatusOK, response)
 }
 
-// getFolderPrefixes returns the folder prefixes.
-func (u *UploadController) getFolderPrefixes(ctx context.Context, prefixesKey string) ([]string, error) {
-	prefixes, err := u.cacheControl.PrefixesCacheControl.Get(ctx, prefixesKey)
+// getFolderPrefixesFullDepth returns all prefixes from the given folder.
+// It doesn't return folders in the prefixes list, only saved objects.
+func (u *UploadController) getFolderPrefixesFullDepth(ctx context.Context, folders ...string) []string {
+	var mu sync.Mutex
+	var wg sync.WaitGroup
+
+	var prefixes []string
+	for _, subPrefix := range folders {
+		if !utils.CheckPrefixIsFolder(subPrefix) {
+			prefixes = append(
+				prefixes,
+				subPrefix,
+			)
+			continue
+		}
+
+		newPrefixes, err := u.getFolderPrefixes(ctx, subPrefix)
+		if err != nil {
+			logger.Warn("error listing prefixes from folder",
+				zap.String("folder", subPrefix),
+			)
+		}
+
+		wg.Add(1)
+		go func(folders []string) {
+			toAppend := u.getFolderPrefixesFullDepth(
+				ctx,
+				folders...,
+			)
+
+			mu.Lock()
+			prefixes = append(
+				prefixes,
+				toAppend...,
+			)
+			mu.Unlock()
+		}(newPrefixes)
+	}
+
+	wg.Wait()
+
+	return prefixes
+}
+
+// getFolderPrefixes returns the given folder prefixes.
+func (u *UploadController) getFolderPrefixes(ctx context.Context, folderPrefix string) ([]string, error) {
+	prefixes, err := u.cacheControl.PrefixesCacheControl.Get(ctx, folderPrefix)
 	if err == nil {
 		return prefixes, nil
 	}
 
-	prefixes, err = u.awsRepository.ListObjects(prefixesKey)
+	prefixes, err = u.awsRepository.ListObjects(folderPrefix)
 	if err != nil {
 		return nil, err
 	}
 
-	u.cacheControl.PrefixesCacheControl.Add(ctx, prefixesKey, prefixes)
+	u.cacheControl.PrefixesCacheControl.Add(ctx, folderPrefix, prefixes)
 
 	return prefixes, nil
 }
@@ -318,13 +407,16 @@ func (u *UploadController) listPrefixes(c context.Context, prefixes []string) []
 
 			cached, err := u.cacheControl.SignedURLCacheControl.Get(c, prefix)
 			if err == nil {
-				if !cached.Temporary {
-					mu.Lock()
-					response = append(response, &views.ListSignedURLResponse{
-						prefix: cached,
-					})
-					mu.Unlock()
+				if cached.Temporary {
+					return
 				}
+
+				mu.Lock()
+				response = append(response, &views.ListSignedURLResponse{
+					prefix: cached,
+				})
+				mu.Unlock()
+
 				return
 			}
 
@@ -336,13 +428,15 @@ func (u *UploadController) listPrefixes(c context.Context, prefixes []string) []
 
 			u.cacheControl.SignedURLCacheControl.Add(c, prefix, signedUrlResponse)
 
-			if !signedUrlResponse.Temporary {
-				mu.Lock()
-				response = append(response, &views.ListSignedURLResponse{
-					prefix: signedUrlResponse,
-				})
-				mu.Unlock()
+			if signedUrlResponse.Temporary {
+				return
 			}
+
+			mu.Lock()
+			response = append(response, &views.ListSignedURLResponse{
+				prefix: signedUrlResponse,
+			})
+			mu.Unlock()
 		}(objKey)
 	}
 
@@ -355,7 +449,7 @@ func (u *UploadController) listPrefixes(c context.Context, prefixes []string) []
 // @Summary Delete file
 // @Description Deletes the file
 // @Tags Upload
-// @Param prefix query string true "File prefix"
+// @Param prefix query string true "File folder prefix"
 // @Produce json
 // @Success 200 {string} OK
 // @Failure 400 {object} http_utils.RestError
@@ -369,6 +463,7 @@ func (u *UploadController) Delete(c *gin.Context) {
 		return
 	}
 
+	// todo: foreachhhhh object
 	err := u.awsRepository.DeleteObject(prefix)
 	if err != nil {
 		abortWithBadRequest(c, "error deleting file", err.Error())
@@ -384,7 +479,7 @@ func (u *UploadController) Delete(c *gin.Context) {
 // @Summary Delete all
 // @Description Deletes all files from prefix
 // @Tags Upload
-// @Param prefix query string true "File prefix"
+// @Param prefix query string true "File folder prefix"
 // @Produce json
 // @Success 200 {string} OK
 // @Failure 400 {object} http_utils.RestError
@@ -398,14 +493,9 @@ func (u *UploadController) DeleteAll(c *gin.Context) {
 		return
 	}
 
-	prefixes, err := u.getFolderPrefixes(c, prefix)
-	if err != nil {
-		abortWithBadRequest(c, "error deleting file", err.Error())
-		return
-	}
-
+	prefixes := u.getFolderPrefixesFullDepth(c, prefix)
 	if len(prefixes) > 0 {
-		err = u.awsRepository.DeleteMany(prefixes)
+		err := u.awsRepository.DeleteMany(prefixes)
 		if err != nil {
 			abortWithBadRequest(c, "error deleting files", err.Error())
 			return

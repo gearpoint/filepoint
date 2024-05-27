@@ -1,81 +1,22 @@
 package aws_repository
 
 import (
-	"context"
-	"crypto/rsa"
 	"errors"
 	"fmt"
 	"io"
-	"net/http"
 	"sync"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	awshttp "github.com/aws/aws-sdk-go-v2/aws/transport/http"
-	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/feature/cloudfront/sign"
 	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
-	"github.com/aws/aws-sdk-go-v2/service/rekognition"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	s3types "github.com/aws/aws-sdk-go-v2/service/s3/types"
-	cfg "github.com/gearpoint/filepoint/config"
 	"github.com/gearpoint/filepoint/internal/views"
 	"github.com/gearpoint/filepoint/pkg/logger"
+	"github.com/gearpoint/filepoint/pkg/utils"
 	"go.uber.org/zap"
 )
-
-const (
-	// Temporary file rule.
-	TempFileRule = "temporary-file"
-	// Signed url expiration time.
-	SignExpiration = 12 * time.Hour
-	// The max number of labels returned.
-	maxRekognitionLabels int32 = 10
-)
-
-// The Rekognition unsuported locations.
-var unsupportedRekoLocations = map[string]bool{
-	"sa-east-1": true,
-}
-
-// AWSRepository contains the aws config and implementations.
-type AWSRepository struct {
-	ctx                  context.Context
-	config               *cfg.AWSConfig
-	s3Client             *s3.Client
-	rekoClient           *rekognition.Client
-	cloudfrontDist       string
-	cloudfrontPrivateKey rsa.PrivateKey
-}
-
-// NewAWSRepository returns a AWSRepository instance.
-func NewAWSRepository(awsConfig *cfg.AWSConfig, ctx context.Context) (*AWSRepository, error) {
-	sdkConfig, err := config.LoadDefaultConfig(ctx, config.WithRegion(awsConfig.Region))
-	if err != nil {
-		return nil, err
-	}
-
-	s3Client := s3.NewFromConfig(sdkConfig)
-
-	if unsupportedRekoLocations[sdkConfig.Region] {
-		sdkConfig.Region = "us-east-1"
-	}
-	rekoClient := rekognition.NewFromConfig(sdkConfig)
-
-	rsaKey, err := getPrivateKey(awsConfig.CloudfrontCrtFile)
-	if err != nil {
-		return nil, err
-	}
-
-	return &AWSRepository{
-		ctx:                  ctx,
-		config:               awsConfig,
-		s3Client:             s3Client,
-		rekoClient:           rekoClient,
-		cloudfrontDist:       awsConfig.CloudfrontDist,
-		cloudfrontPrivateKey: *rsaKey,
-	}, nil
-}
 
 // PutObject puts a new object in the given prefix.
 // Do not use it for large files.
@@ -129,13 +70,24 @@ func (r *AWSRepository) GetSignedObject(prefix string) (*views.GetSignedURLRespo
 		return nil, err
 	}
 
-	labels, temp, err := r.GetObjectTagging(prefix)
+	tagging, temp, err := r.GetObjectTagging(prefix)
 	if err != nil {
 		return nil, err
 	}
 
 	url := fmt.Sprintf("%s/%s", r.cloudfrontDist, prefix)
 	expires := time.Now().Add(SignExpiration)
+
+	if utils.IsDevEnvironment() {
+		url := fmt.Sprintf("%s/%s", r.config.Endpoint, prefix)
+		return &views.GetSignedURLResponse{
+			Url:       url,
+			Metadata:  obj.Metadata,
+			Tagging:   tagging,
+			Expires:   expires,
+			Temporary: temp,
+		}, nil
+	}
 
 	signer := sign.NewURLSigner(r.config.CloudfrontKeyId, &r.cloudfrontPrivateKey)
 	signedUrl, err := signer.Sign(url, expires)
@@ -146,7 +98,7 @@ func (r *AWSRepository) GetSignedObject(prefix string) (*views.GetSignedURLRespo
 	return &views.GetSignedURLResponse{
 		Url:       signedUrl,
 		Metadata:  obj.Metadata,
-		Labels:    labels,
+		Tagging:   tagging,
 		Expires:   expires,
 		Temporary: temp,
 	}, nil
@@ -254,7 +206,7 @@ func (r *AWSRepository) PutObjectTagging(prefix string, tagging map[string]strin
 }
 
 // GetObjectTagging gets the object tags.
-func (r *AWSRepository) GetObjectTagging(prefix string) ([]string, bool, error) {
+func (r *AWSRepository) GetObjectTagging(prefix string) (map[string]string, bool, error) {
 	response, err := r.s3Client.GetObjectTagging(r.ctx, &s3.GetObjectTaggingInput{
 		Bucket: &r.config.Bucket,
 		Key:    &prefix,
@@ -264,28 +216,13 @@ func (r *AWSRepository) GetObjectTagging(prefix string) ([]string, bool, error) 
 	}
 
 	var temporary bool
-	tags := []string{}
+	tags := make(map[string]string)
 	for _, tag := range response.TagSet {
 		if *tag.Key == TempFileRule {
 			temporary = true
 		}
 
-		tags = append(tags, *tag.Key)
+		tags[*tag.Key] = *tag.Value
 	}
 	return tags, temporary, nil
-}
-
-// getPrivateKey returns a private key.
-func getPrivateKey(filepath string) (*rsa.PrivateKey, error) {
-	return sign.LoadPEMPrivKeyFile(filepath)
-}
-
-// CheckIsNotFoundError checks if the aws error is not found.
-func CheckIsNotFoundError(err error) bool {
-	var responseError *awshttp.ResponseError
-	if errors.As(err, &responseError) && responseError.ResponseError.HTTPStatusCode() == http.StatusNotFound {
-		return true
-	}
-
-	return false
 }

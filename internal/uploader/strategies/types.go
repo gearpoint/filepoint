@@ -1,4 +1,4 @@
-// strategies is used to control the uploader strategies (image, video, file...).
+// uploader is used to define uploader strategies (image, video, file...).
 package strategies
 
 import (
@@ -12,20 +12,26 @@ import (
 // EventTypeKey is used to define the event type key of each strategy.
 type EventTypeKey string
 
-// Uploader contains the methods of any uploader.
+// FileDefinitions defines the available definitions.
+type FileDefinitions string
+
+// Uploader defines the file uploading methods.
 type Uploader interface {
 	SetConfig(cfg *UploaderConfig)
 	GetConfig() *UploaderConfig
 	GetContentTypes() utils.ContentTypeMapping
+	GetFileDefinitions() utils.FileDefinitionsMapping
 	Validate(uploadPubSub *views.UploadPubSub) error
-	SetLabels(prefix string)
-	HandleFile(prefix string) (io.ReadCloser, error)
-	Upload(reader io.ReadCloser) (string, error)
+	HandleFile(definition utils.FileDefinitions, reader io.ReadCloser) (io.ReadCloser, error)
+	Upload(filename string, reader io.ReadCloser) (string, error)
+	DownloadTemp(tempPrefix string) (io.ReadCloser, error)
 	UploadTemp(reader io.ReadCloser) (string, error)
+	SetLabels(filename string)
 }
 
 // UploaderConfig contains the uploader strategy configuration.
 type UploaderConfig struct {
 	UploadView    *views.UploadPubSub
 	AWSRepository *aws_repository.AWSRepository
+	Prefix        string
 }

@@ -1,14 +1,18 @@
 package sender_handlers
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
+	"sync"
 	"time"
 
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
 	"github.com/ThreeDotsLabs/watermill/pubsub/gochannel"
+	"github.com/gearpoint/filepoint/config"
 	cache_control "github.com/gearpoint/filepoint/internal/cache-control"
 	"github.com/gearpoint/filepoint/internal/uploader"
 	"github.com/gearpoint/filepoint/internal/uploader/strategies"
@@ -16,11 +20,13 @@ import (
 	"github.com/gearpoint/filepoint/pkg/aws_repository"
 	"github.com/gearpoint/filepoint/pkg/logger"
 	"github.com/gearpoint/filepoint/pkg/redis"
+	"github.com/gearpoint/filepoint/pkg/utils"
 	"github.com/gearpoint/filepoint/pkg/watermill"
 	"go.uber.org/zap"
 )
 
 type UploadHandler struct {
+	tableName          string
 	maxRetries         int
 	poisonQueueTopic   string
 	webhookURL         string
@@ -28,58 +34,72 @@ type UploadHandler struct {
 	uploadCacheControl *cache_control.UploadCacheControl
 }
 
-func NewUploadHandler(awsRepository *aws_repository.AWSRepository, redisRepository *redis.RedisRepository, webhookURL string) *UploadHandler {
+func NewUploadHandler(awsRepository *aws_repository.AWSRepository, redisRepository *redis.RedisRepository, routeCfg config.RouteConfig) *UploadHandler {
 	return &UploadHandler{
-		maxRetries:         10,
-		poisonQueueTopic:   "upload_poison_queue",
-		webhookURL:         webhookURL,
+		tableName:          routeCfg.TableName,
+		maxRetries:         routeCfg.MaxRetries,
+		poisonQueueTopic:   routeCfg.PoisonTopic,
+		webhookURL:         routeCfg.WebhookURL,
 		awsRepository:      awsRepository,
 		uploadCacheControl: cache_control.NewUploadCacheControl(redisRepository),
 	}
 }
 
+func SetMessageContext(msg *message.Message) {
+	msg.SetContext(
+		logger.NewContext(
+			msg.Context(),
+			zap.String("request_id", msg.UUID),
+		),
+	)
+}
+
 // ProccessUploadMessages proccess the upload and returns the callback message.
 func (h *UploadHandler) ProccessUploadMessages() message.HandlerFunc {
 	return func(msg *message.Message) ([]*message.Message, error) {
-		ctx := logger.NewContext(msg.Context(), zap.String("request_id", msg.UUID))
-		msg.SetContext(ctx)
-
-		eventType := strategies.EventTypeKey(msg.Metadata.Get(views.EventType))
-
-		logger.WithContext(msg.Context()).Info("processing upload message",
-			zap.Any("eventType", eventType),
+		msg.SetContext(
+			logger.NewContext(
+				msg.Context(),
+				zap.String("request_id", msg.UUID),
+			),
 		)
 
-		uploader, err := uploader.GetUploaderByEventType(eventType)
-		if err == nil {
-			return nil, errors.New("unrecognized event-type")
-		}
+		logger := logger.WithContext(msg.Context())
 
-		var uploadPubSub = &views.UploadPubSub{}
-		err = json.Unmarshal(msg.Payload, uploadPubSub)
+		eventType := strategies.EventTypeKey(msg.Metadata.Get(views.EventType))
+		s3Prefix := msg.Metadata.Get(views.S3Prefix)
+
+		logger.Info("processing upload message",
+			zap.Any("eventType", eventType),
+			zap.Any("s3Prefix", s3Prefix),
+		)
+
+		uploadPubSub, err := h.unmarshalUpload(msg.Payload)
 		if err != nil {
-			logger.WithContext(msg.Context()).Error(err.Error())
+			logger.Error(err.Error())
 			return nil, err
 		}
 
-		location, err := h.handleUpload(msg, uploader, uploadPubSub)
+		err = h.handleUpload(msg, uploadPubSub)
 		if err != nil {
-			logger.WithContext(msg.Context()).Error(err.Error())
+			logger.Error(err.Error())
 			return nil, err
 		}
 
-		logger.WithContext(msg.Context()).Info("sending success upload webhook")
+		logger.Info("sending success upload webhook")
 
 		webhookPayload, err := json.Marshal(views.WebhookPayload{
-			Id:       uploadPubSub.Id,
-			Success:  err == nil,
-			Location: location,
-			Error:    "",
+			Id:            uploadPubSub.Id,
+			Success:       err == nil,
+			CorrelationId: uploadPubSub.CorrelationId,
+			Location:      s3Prefix,
+			Error:         "",
 		})
 		if err != nil {
-			logger.WithContext(msg.Context()).Error(err.Error())
 			return nil, err
 		}
+
+		h.uploadCacheControl.PrefixesCacheControl.AddKeyToCachedPrefixes(msg.Context(), s3Prefix)
 
 		msg.Ack()
 
@@ -89,39 +109,112 @@ func (h *UploadHandler) ProccessUploadMessages() message.HandlerFunc {
 	}
 }
 
+// unmarshalUpload returns the UploadPubSub view or error.
+func (h *UploadHandler) unmarshalUpload(payload message.Payload) (*views.UploadPubSub, error) {
+	var uploadPubSub = &views.UploadPubSub{}
+	err := json.Unmarshal(payload, uploadPubSub)
+
+	return uploadPubSub, err
+}
+
 // handleUpload is responsible for uploading the file.
-func (h *UploadHandler) handleUpload(msg *message.Message, uploader strategies.Uploader, uploadPubSub *views.UploadPubSub) (string, error) {
+func (h *UploadHandler) handleUpload(msg *message.Message, uploadPubSub *views.UploadPubSub) error {
+	logger := logger.WithContext(msg.Context())
+
+	eventType := strategies.EventTypeKey(msg.Metadata.Get(views.EventType))
+	s3Prefix := msg.Metadata.Get(views.S3Prefix)
+	tempObjectPrefix := msg.Metadata.Get(views.TempObjectPrefix)
+
+	uploader, err := uploader.GetUploaderByEventType(eventType)
+	if err != nil {
+		logger.Error("unrecognized event-type",
+			zap.Error(err),
+		)
+		return errors.New("unrecognized event-type")
+	}
+
 	uploader.SetConfig(&strategies.UploaderConfig{
 		UploadView:    uploadPubSub,
 		AWSRepository: h.awsRepository,
+		Prefix:        s3Prefix,
 	})
 
-	s3Prefix := msg.Metadata.Get(views.S3Prefix)
-	reader, err := uploader.HandleFile(s3Prefix)
+	tempReader, err := uploader.DownloadTemp(tempObjectPrefix)
+	defer tempReader.Close()
 	if err != nil {
-		return "", err
+		logger.Error("error downloading temp file",
+			zap.Any("tempObjectPrefix", tempObjectPrefix),
+			zap.Error(err),
+		)
+		return err
 	}
 
-	// todo: add to DynamoDB
-	// todo: multiple file definitions
-	// todo: return folder here?
-	newS3Prefix, err := uploader.Upload(reader)
-	reader.Close()
+	// todo: check f, err := utils.CreateTmpFile
 
+	fileDefs := uploader.GetFileDefinitions()
+	definitionsMap := make(utils.FileDefinitionsMapping, len(fileDefs))
+
+	var mu sync.Mutex
+	var wg sync.WaitGroup
+
+	for def, name := range fileDefs {
+		wg.Add(1)
+		go func(uploader strategies.Uploader, logger *zap.Logger) {
+			aUploader := uploader
+			aLogger := logger
+
+			// creates a new tee reader from the temporary file
+			var buf bytes.Buffer
+			tee := io.TeeReader(tempReader, &buf)
+
+			handledReader, err := aUploader.HandleFile(def, io.NopCloser(tee))
+			defer handledReader.Close()
+
+			if err != nil {
+				aLogger.Warn("error handling file",
+					zap.Any("definition", def),
+					zap.Error(err),
+				)
+				return
+			}
+
+			objectName, err := aUploader.Upload(name, handledReader)
+			if err != nil {
+				aLogger.Warn("error uploading file",
+					zap.Any("definition", def),
+					zap.Error(err),
+				)
+				return
+			}
+
+			mu.Lock()
+			tempReader = utils.ReadCloserFromBytes(buf.Bytes())
+			definitionsMap[def] = objectName
+			mu.Unlock()
+
+			logger.Info("File uploaded successfully",
+				zap.String("objectName", objectName),
+			)
+		}(uploader, logger)
+	}
+	wg.Wait()
+
+	err = h.awsRepository.UpdateTableRow(
+		h.tableName, views.DynamoDBUploadSchema{
+			UserId:         uploadPubSub.UserId,
+			Prefix:         s3Prefix,
+			DefinitionsMap: definitionsMap,
+		},
+	)
 	if err != nil {
-		return "", err
+		logger.Error("error downloading temp file",
+			zap.Any("tempObjectPrefix", tempObjectPrefix),
+			zap.Error(err),
+		)
+		return errors.New("unable to update file data in DB")
 	}
 
-	uploader.SetLabels(newS3Prefix)
-
-	tagging := map[string]string{
-		"event-type": msg.Metadata.Get(views.EventType),
-	}
-	h.awsRepository.PutObjectTagging(newS3Prefix, tagging)
-
-	h.uploadCacheControl.PrefixesCacheControl.AddKeyToCachedPrefixes(msg.Context(), newS3Prefix)
-
-	return newS3Prefix, nil
+	return nil
 }
 
 // SetupUploadMiddlewares returns the specific upload middlewares.
@@ -136,9 +229,9 @@ func (h *UploadHandler) SetupUploadMiddlewares() []message.HandlerMiddleware {
 
 	retryMiddleware := middleware.Retry{
 		MaxRetries:      h.maxRetries,
-		InitialInterval: time.Millisecond * 100,
-		MaxInterval:     time.Second * 5,
-		Multiplier:      1.2,
+		InitialInterval: time.Second * 5,
+		MaxInterval:     time.Hour * 5,
+		Multiplier:      1.25,
 		Logger:          watermill.NewZapLoggerAdapter(logger.Logger),
 	}
 
@@ -157,42 +250,50 @@ func (h *UploadHandler) processUploadPoisonQueue(gochannel *gochannel.GoChannel,
 
 	go func(messages <-chan *message.Message) {
 		for msg := range messages {
+			uploadPubSub, err := h.unmarshalUpload(msg.Payload)
+			if err != nil {
+				uploadPubSub = &views.UploadPubSub{
+					Id: msg.UUID,
+				}
+			}
+
 			logger.Info("sending error message to webhook...")
-			SendUploadErrorWebhook(msg.Context(), msg.UUID, h.webhookURL)
+			SendUploadErrorWebhook(msg.Context(), uploadPubSub, h.webhookURL)
 			msg.Ack()
 		}
 	}(messages)
 }
 
 // SendUploadErrorWebhook calls the upload webhook with error message.
-func SendUploadErrorWebhook(ctx context.Context, id string, webhookURL string) {
-	ctx = logger.NewContext(ctx, zap.String("request_id", id))
+func SendUploadErrorWebhook(ctx context.Context, uploadPubSub *views.UploadPubSub, webhookURL string) {
+	logger := logger.WithContext(ctx)
 
 	httpPublisher, err := watermill.NewHttpPublisher()
 	if err != nil {
-		logger.WithContext(ctx).Error("error initializing http publisher", zap.Error(err))
+		logger.Error("error initializing http publisher", zap.Error(err))
 		return
 	}
 
-	logger.WithContext(ctx).Info("sending error upload webhook")
+	logger.Info("sending error upload webhook")
 
 	payload, err := json.Marshal(views.WebhookPayload{
-		Id:       id,
-		Success:  false,
-		Location: "",
-		Error:    "error uploading file",
+		Id:            uploadPubSub.Id,
+		Success:       false,
+		CorrelationId: uploadPubSub.CorrelationId,
+		Location:      "",
+		Error:         "error uploading file",
 	})
 
 	if err != nil {
-		logger.WithContext(ctx).Error("cannot marshal message", zap.Error(err))
+		logger.Error("cannot marshal message", zap.Error(err))
 		return
 	}
 
-	message := message.NewMessage(id, payload)
+	message := message.NewMessage(uploadPubSub.Id, payload)
 
 	err = httpPublisher.Publish(webhookURL, message)
 	if err != nil {
-		logger.WithContext(ctx).Error("error sending http request", zap.Error(err))
+		logger.Error("error sending http request", zap.Error(err))
 		return
 	}
 
