@@ -123,8 +123,11 @@ func (u *UploadController) Upload(c *gin.Context) {
 	dynamoDBSchema := views.DynamoDBUploadSchema{
 		UserId:        uploadPubSub.UserId,
 		Prefix:        utils.GetUniquePrefix(uploadPubSub.UserId),
+		Author:        requestBody.Author,
+		Title:         requestBody.Title,
 		RequestId:     uploadPubSub.Id,
 		CorrelationId: uploadPubSub.CorrelationId,
+		OccurredOn:    time.Now(),
 	}
 
 	uploader.SetConfig(&strategies.UploaderConfig{
@@ -150,6 +153,7 @@ func (u *UploadController) Upload(c *gin.Context) {
 	err = u.awsRepository.AddTableRow(u.tableName, dynamoDBSchema)
 	if err != nil {
 		abortWithBadRequest(c, "error saving file information", err.Error())
+		return
 	}
 
 	go u.uploadWorker(eventType, uploader, file)
@@ -167,7 +171,7 @@ func (u *UploadController) Upload(c *gin.Context) {
 
 // uploadWorker makes the upload publish.
 func (u *UploadController) uploadWorker(eventType strategies.EventTypeKey, uploader strategies.Uploader, file multipart.File) {
-	cfg := uploader.GetConfig()
+	cfg := uploader.Config()
 	ctx := logger.NewContext(context.Background(), zap.String("request_id", cfg.UploadView.Id))
 	logger := logger.WithContext(ctx)
 
@@ -358,6 +362,7 @@ func (u *UploadController) getFolderPrefixesFullDepth(ctx context.Context, folde
 
 		wg.Add(1)
 		go func(folders []string) {
+			defer wg.Done()
 			toAppend := u.getFolderPrefixesFullDepth(
 				ctx,
 				folders...,

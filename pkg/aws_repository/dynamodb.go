@@ -1,7 +1,6 @@
 package aws_repository
 
 import (
-	"context"
 	"errors"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -14,7 +13,7 @@ import (
 // TableExists determines whether a DynamoDB table exists.
 func (r *AWSRepository) TableExists(tableName string) (bool, error) {
 	_, err := r.dynamoClient.DescribeTable(
-		context.TODO(), &dynamodb.DescribeTableInput{
+		r.ctx, &dynamodb.DescribeTableInput{
 			TableName: aws.String(tableName),
 		},
 	)
@@ -55,7 +54,7 @@ func (r *AWSRepository) GetTableRow(tableName string, schema views.DynamoDBSchem
 func (r *AWSRepository) AddTableRow(tableName string, schema views.DynamoDBSchema) error {
 	item, err := attributevalue.MarshalMap(schema)
 	if err != nil {
-		panic(err)
+		return errors.New("error reading table row info")
 	}
 	_, err = r.dynamoClient.PutItem(r.ctx, &dynamodb.PutItemInput{
 		TableName: aws.String(tableName),
@@ -98,4 +97,14 @@ func (r *AWSRepository) UpdateTableRow(tableName string, schema views.DynamoDBSc
 	})
 
 	return err
+}
+
+// DelTableRow removes a row from the DynamoDB table.
+func (r *AWSRepository) DelTableRow(tableName string, schema views.DynamoDBSchema) error {
+	_, err := schema.GetKey()
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

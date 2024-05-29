@@ -5,15 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 
 	"github.com/gearpoint/filepoint/internal/views"
 	"github.com/gearpoint/filepoint/pkg/aws_repository"
 	"github.com/gearpoint/filepoint/pkg/utils"
-)
-
-const (
-	// Defines the upload max size in bytes.
-	uploadMaxSize int64 = 0
 )
 
 // BaseUploader is the Uploader base implementation.
@@ -22,6 +18,14 @@ type BaseUploader struct {
 	config          *UploaderConfig
 	contentTypes    utils.ContentTypeMapping
 	fileDefinitions utils.FileDefinitionsMapping
+
+	// Defines the upload max size in bytes.
+	UploadMaxSize int64
+}
+
+// Config returns the uploader configuration.
+func (u *BaseUploader) Config() *UploaderConfig {
+	return u.config
 }
 
 // SetConfig adds the uploader configuration.
@@ -29,14 +33,24 @@ func (u *BaseUploader) SetConfig(cfg *UploaderConfig) {
 	u.config = cfg
 }
 
-// GetConfig returns the uploader configuration.
-func (u *BaseUploader) GetConfig() *UploaderConfig {
-	return u.config
+// ContentTypes returns the uploader allowed content types.
+func (u *BaseUploader) ContentTypes() utils.ContentTypeMapping {
+	return u.contentTypes
 }
 
-// GetContentTypes returns the uploader allowed content types.
-func (u *BaseUploader) GetContentTypes() utils.ContentTypeMapping {
-	return u.contentTypes
+// SetContentTypes adds the allowed content types.
+func (u *BaseUploader) SetContentTypes(contentTypes utils.ContentTypeMapping) {
+	u.contentTypes = contentTypes
+}
+
+// FileDefinitions returns the file definitions.
+func (u *BaseUploader) FileDefinitions() utils.FileDefinitionsMapping {
+	return u.fileDefinitions
+}
+
+// SetFileDefinitions adds the allowed file definitions.
+func (u *BaseUploader) SetFileDefinitions(fileDefinitions utils.FileDefinitionsMapping) {
+	u.fileDefinitions = fileDefinitions
 }
 
 // FormatPrefix formats the file prefix with the given filename.
@@ -47,7 +61,7 @@ func (u *BaseUploader) FormatPrefix(filename string) string {
 	return utils.CreatePrefix(u.config.Prefix, filename)
 }
 
-// GetFileDefinitions returns the file definitions.
+// SetFileDefinitions returns the file definitions.
 func (u *BaseUploader) GetFileDefinitions() utils.FileDefinitionsMapping {
 	return u.fileDefinitions
 }
@@ -57,15 +71,20 @@ func (u *BaseUploader) Validate(uploadPubSub *views.UploadPubSub) error {
 	ctx := context.WithValue(
 		context.Background(),
 		utils.MaxFileSizeKey,
-		uploadMaxSize,
+		u.UploadMaxSize,
 	)
 
 	return utils.Validate.StructCtx(ctx, uploadPubSub)
 }
 
 // HandleFile handles the video - converts it, etc.
-func (u *BaseUploader) HandleFile(definition utils.FileDefinitions, reader io.ReadCloser) (io.ReadCloser, error) {
-	return reader, nil
+func (u *BaseUploader) HandleFile(definition utils.FileDefinitions, tempFilename string) (io.ReadCloser, error) {
+	file, err := os.Open(tempFilename)
+	if err != nil {
+		return nil, err
+	}
+
+	return io.NopCloser(file), nil
 }
 
 // Upload uploads a new file to S3.
@@ -79,7 +98,7 @@ func (u *BaseUploader) Upload(filename string, reader io.ReadCloser) (string, er
 		"filename": u.config.UploadView.Filename,
 	}
 
-	err := u.config.AWSRepository.PutObject(
+	err := u.config.AWSRepository.UploadChunks(
 		s3Prefix,
 		reader,
 		u.config.UploadView.ContentType,

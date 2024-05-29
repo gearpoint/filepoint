@@ -34,7 +34,7 @@ func GetUploaderByEventType(event_type strategies.EventTypeKey) (strategies.Uplo
 func GetUploaderByContentType(contentType string) (strategies.EventTypeKey, strategies.Uploader, error) {
 	for key, initUploader := range uploadersMap {
 		uploader := initUploader()
-		if utils.CheckAllowedContentType(uploader.GetContentTypes(), contentType) {
+		if utils.CheckAllowedContentType(uploader.ContentTypes(), contentType) {
 			return key, uploader, nil
 		}
 	}

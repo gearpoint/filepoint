@@ -43,11 +43,7 @@ type AWSRepository struct {
 
 // NewAWSRepository returns a AWSRepository instance.
 func NewAWSRepository(awsConfig *cfg.AWSConfig, ctx context.Context) (*AWSRepository, error) {
-	sdkConfig, err := config.LoadDefaultConfig(
-		ctx,
-		config.WithRegion(awsConfig.Region),
-		getEndpointResolver(awsConfig),
-	)
+	sdkConfig, err := GetAWSConfig(ctx, awsConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -79,14 +75,24 @@ func NewAWSRepository(awsConfig *cfg.AWSConfig, ctx context.Context) (*AWSReposi
 	}, nil
 }
 
+// GetAWSConfig returns the configured aws.Config instance.
+func GetAWSConfig(ctx context.Context, awsConfig *cfg.AWSConfig) (aws.Config, error) {
+	return config.LoadDefaultConfig(
+		ctx,
+		config.WithRegion(awsConfig.Region),
+		getEndpointResolver(awsConfig),
+	)
+}
+
 // getEndpointResolver configures the AWS endpoint that will be used to make API calls.
 func getEndpointResolver(awsConfig *cfg.AWSConfig) config.LoadOptionsFunc {
 	customResolver := aws.EndpointResolverWithOptionsFunc(func(service, region string, options ...interface{}) (aws.Endpoint, error) {
 		if awsConfig.Endpoint != "" {
 			return aws.Endpoint{
-				PartitionID:   "aws",
-				URL:           awsConfig.Endpoint,
-				SigningRegion: awsConfig.Region,
+				PartitionID:       "aws",
+				URL:               awsConfig.Endpoint,
+				SigningRegion:     region,
+				HostnameImmutable: true,
 			}, nil
 		}
 

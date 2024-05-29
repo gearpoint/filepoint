@@ -14,7 +14,7 @@ Routes:
     MaxRetries: 50
 
 AWSConfig:
-  Endpoint: "http://localhost:4566"
+  Endpoint: "http://localstack:4566"
   Bucket: "filepoint-us"
   Region: "us-east-1"
   CloudfrontCrtFile: ".aws/filepoint-cloudfront.pem"

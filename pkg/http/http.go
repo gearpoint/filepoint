@@ -12,8 +12,8 @@ func GetRequestId(ctx *gin.Context) string {
 	return requestid.Get(ctx)
 }
 
-// GetConfigPath gets the config path for local or docker.
-func GetConfigPath(configPath string) string {
+// ConfigPath gets the config path for local or docker.
+func ConfigPath(configPath string) string {
 	if configPath == "docker" {
 		return "./config/config-docker"
 	}

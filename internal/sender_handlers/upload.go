@@ -1,11 +1,10 @@
 package sender_handlers
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
-	"io"
+	"os"
 	"sync"
 	"time"
 
@@ -119,11 +118,12 @@ func (h *UploadHandler) unmarshalUpload(payload message.Payload) (*views.UploadP
 
 // handleUpload is responsible for uploading the file.
 func (h *UploadHandler) handleUpload(msg *message.Message, uploadPubSub *views.UploadPubSub) error {
-	logger := logger.WithContext(msg.Context())
-
 	eventType := strategies.EventTypeKey(msg.Metadata.Get(views.EventType))
 	s3Prefix := msg.Metadata.Get(views.S3Prefix)
 	tempObjectPrefix := msg.Metadata.Get(views.TempObjectPrefix)
+
+	ctx := logger.NewContext(msg.Context(), zap.Any("s3Prefix", s3Prefix))
+	logger := logger.WithContext(ctx)
 
 	uploader, err := uploader.GetUploaderByEventType(eventType)
 	if err != nil {
@@ -140,47 +140,50 @@ func (h *UploadHandler) handleUpload(msg *message.Message, uploadPubSub *views.U
 	})
 
 	tempReader, err := uploader.DownloadTemp(tempObjectPrefix)
-	defer tempReader.Close()
 	if err != nil {
 		logger.Error("error downloading temp file",
-			zap.Any("tempObjectPrefix", tempObjectPrefix),
 			zap.Error(err),
 		)
 		return err
 	}
+	filename, err := utils.CreateTmpFile(tempReader)
+	tempReader.Close()
+	if err != nil {
+		logger.Error("error creating temp file",
+			zap.Error(err),
+		)
+		return err
+	}
+	defer os.Remove(filename)
 
-	// todo: check f, err := utils.CreateTmpFile
-
-	fileDefs := uploader.GetFileDefinitions()
-	definitionsMap := make(utils.FileDefinitionsMapping, len(fileDefs))
+	fileDefs := uploader.FileDefinitions()
+	definitionsMap := utils.FileDefinitionsMapping{}
 
 	var mu sync.Mutex
 	var wg sync.WaitGroup
 
 	for def, name := range fileDefs {
 		wg.Add(1)
-		go func(uploader strategies.Uploader, logger *zap.Logger) {
+		go func(
+			def utils.FileDefinitions, name string, uploader strategies.Uploader, logger *zap.Logger,
+		) {
+			defer wg.Done()
 			aUploader := uploader
 			aLogger := logger
 
-			// creates a new tee reader from the temporary file
-			var buf bytes.Buffer
-			tee := io.TeeReader(tempReader, &buf)
-
-			handledReader, err := aUploader.HandleFile(def, io.NopCloser(tee))
-			defer handledReader.Close()
-
+			handledReader, err := aUploader.HandleFile(def, filename)
 			if err != nil {
-				aLogger.Warn("error handling file",
+				aLogger.Warn("error handling the file",
 					zap.Any("definition", def),
 					zap.Error(err),
 				)
 				return
 			}
+			defer handledReader.Close()
 
 			objectName, err := aUploader.Upload(name, handledReader)
 			if err != nil {
-				aLogger.Warn("error uploading file",
+				aLogger.Warn("error uploading file to storage",
 					zap.Any("definition", def),
 					zap.Error(err),
 				)
@@ -188,31 +191,35 @@ func (h *UploadHandler) handleUpload(msg *message.Message, uploadPubSub *views.U
 			}
 
 			mu.Lock()
-			tempReader = utils.ReadCloserFromBytes(buf.Bytes())
 			definitionsMap[def] = objectName
 			mu.Unlock()
 
-			logger.Info("File uploaded successfully",
+			logger.Info("file uploaded successfully",
 				zap.String("objectName", objectName),
 			)
-		}(uploader, logger)
+		}(def, name, uploader, logger)
 	}
 	wg.Wait()
 
-	err = h.awsRepository.UpdateTableRow(
-		h.tableName, views.DynamoDBUploadSchema{
-			UserId:         uploadPubSub.UserId,
-			Prefix:         s3Prefix,
-			DefinitionsMap: definitionsMap,
-		},
-	)
-	if err != nil {
-		logger.Error("error downloading temp file",
-			zap.Any("tempObjectPrefix", tempObjectPrefix),
-			zap.Error(err),
-		)
-		return errors.New("unable to update file data in DB")
+	if len(fileDefs) == 0 {
+		return errors.New("file could not be uploaded")
 	}
+
+	// err = h.awsRepository.UpdateTableRow(
+	// 	h.tableName, views.DynamoDBUploadSchema{
+	// 		UserId:         uploadPubSub.UserId,
+	// 		Prefix:         s3Prefix,
+	// 		DefinitionsMap: definitionsMap,
+	// 	},
+	// )
+	// if err != nil {
+	// 	logger.Error("error updating table row",
+	// 		zap.Any("tableName", h.tableName),
+	// 		zap.Any("userId", uploadPubSub.UserId),
+	// 		zap.Error(err),
+	// 	)
+	// 	return errors.New("unable to update file data in DB")
+	// }
 
 	return nil
 }

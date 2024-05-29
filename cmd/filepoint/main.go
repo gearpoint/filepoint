@@ -49,7 +49,7 @@ func main() {
 
 	awsRepository, err := aws_repository.NewAWSRepository(&cfg.AWSConfig, context.Background())
 	if err != nil {
-		logger.Fatal("cannot initialize storage client",
+		logger.Fatal("cannot initialize AWS repository",
 			zap.Error(err),
 		)
 	}

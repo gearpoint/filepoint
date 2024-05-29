@@ -16,21 +16,22 @@ const (
 // FileUploader is the file uploader implementation.
 type FileUploader struct {
 	strategies.BaseUploader
-
-	config          *strategies.UploaderConfig
-	contentTypes    utils.ContentTypeMapping
-	fileDefinitions utils.FileDefinitionsMapping
 }
 
 // NewUploader returns a new Uploader instance.
 func NewUploader() strategies.Uploader {
-	return &FileUploader{
-		contentTypes: utils.ContentTypeMapping{
-			"text/plain":      "txt",
-			"application/pdf": "pdf",
-		},
-		fileDefinitions: utils.FileDefinitionsMapping{
-			utils.HighDef: "high-def",
+	uploader := &FileUploader{
+		BaseUploader: strategies.BaseUploader{
+			UploadMaxSize: uploadMaxSize,
 		},
 	}
+	uploader.SetContentTypes(utils.ContentTypeMapping{
+		"text/plain":      "txt",
+		"application/pdf": "pdf",
+	})
+	uploader.SetFileDefinitions(utils.FileDefinitionsMapping{
+		utils.HighDef: "high-def",
+	})
+
+	return uploader
 }

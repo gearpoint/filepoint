@@ -17,12 +17,14 @@ type FileDefinitions string
 
 // Uploader defines the file uploading methods.
 type Uploader interface {
+	Config() *UploaderConfig
 	SetConfig(cfg *UploaderConfig)
-	GetConfig() *UploaderConfig
-	GetContentTypes() utils.ContentTypeMapping
-	GetFileDefinitions() utils.FileDefinitionsMapping
+	ContentTypes() utils.ContentTypeMapping
+	SetContentTypes(contentTypes utils.ContentTypeMapping)
+	FileDefinitions() utils.FileDefinitionsMapping
+	SetFileDefinitions(fileDefinitions utils.FileDefinitionsMapping)
 	Validate(uploadPubSub *views.UploadPubSub) error
-	HandleFile(definition utils.FileDefinitions, reader io.ReadCloser) (io.ReadCloser, error)
+	HandleFile(definition utils.FileDefinitions, tempFilename string) (io.ReadCloser, error)
 	Upload(filename string, reader io.ReadCloser) (string, error)
 	DownloadTemp(tempPrefix string) (io.ReadCloser, error)
 	UploadTemp(reader io.ReadCloser) (string, error)

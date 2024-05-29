@@ -1,6 +1,8 @@
 package views
 
 import (
+	"time"
+
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	"github.com/gearpoint/filepoint/pkg/utils"
@@ -16,10 +18,13 @@ type DynamoDBSchema interface {
 type DynamoDBUploadSchema struct {
 	UserId         string                       `dynamodbav:"userId"`
 	Prefix         string                       `dynamodbav:"prefix"`
+	Author         string                       `dynamodbav:"author"`
+	Title          string                       `dynamodbav:"title"`
 	RequestId      string                       `dynamodbav:"requestId"`
 	CorrelationId  string                       `dynamodbav:"correlationId"`
 	DefinitionsMap utils.FileDefinitionsMapping `dynamodbav:"definitionsMap"`
 	FileLabels     FileLabelling                `dynamodbav:"fileLabels"`
+	OccurredOn     time.Time                    `dynamodbav:"occurredOn"`
 }
 
 func (d DynamoDBUploadSchema) GetKey() (map[string]types.AttributeValue, error) {

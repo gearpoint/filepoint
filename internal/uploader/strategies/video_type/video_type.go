@@ -3,6 +3,7 @@ package video_type
 import (
 	"errors"
 	"io"
+	"os"
 
 	"github.com/gearpoint/filepoint/internal/uploader/strategies"
 	"github.com/gearpoint/filepoint/pkg/aws_repository"
@@ -20,31 +21,36 @@ const (
 // VideoUploader is the video uploader implementation.
 type VideoUploader struct {
 	strategies.BaseUploader
-
-	config          *strategies.UploaderConfig
-	contentTypes    utils.ContentTypeMapping
-	fileDefinitions utils.FileDefinitionsMapping
 }
 
 // NewUploader returns a new Uploader instance.
 func NewUploader() strategies.Uploader {
-	return &VideoUploader{
-		contentTypes: utils.ContentTypeMapping{
-			"video/mp4":  "mp4",
-			"video/mpeg": "mpeg",
-			"video/ogg":  "ogv",
-		},
-		fileDefinitions: utils.FileDefinitionsMapping{
-			utils.HighDef: "high-def",
+	uploader := &VideoUploader{
+		BaseUploader: strategies.BaseUploader{
+			UploadMaxSize: uploadMaxSize,
 		},
 	}
+	uploader.SetContentTypes(utils.ContentTypeMapping{
+		"video/mp4":  "mp4",
+		"video/mpeg": "mpeg",
+		"video/ogg":  "ogv",
+	})
+	uploader.SetFileDefinitions(utils.FileDefinitionsMapping{
+		utils.HighDef: "high-def",
+	})
+
+	return uploader
 }
 
 // HandleFile handles the video - converts it, etc.
-func (u *VideoUploader) HandleFile(definition utils.FileDefinitions, reader io.ReadCloser) (io.ReadCloser, error) {
+func (u *VideoUploader) HandleFile(definition utils.FileDefinitions, tempFilename string) (io.ReadCloser, error) {
 	// todo: add goffmpeg
-	// do not use ReadAll with large files
-	return reader, nil
+	file, err := os.Open(tempFilename)
+	if err != nil {
+		return nil, err
+	}
+
+	return io.NopCloser(file), nil
 }
 
 // Upload uploads a new file to S3.
@@ -52,16 +58,16 @@ func (u *VideoUploader) Upload(filename string, reader io.ReadCloser) (string, e
 	s3Prefix := u.FormatPrefix(filename)
 
 	var metadata = map[string]string{
-		"user-id":  u.config.UploadView.UserId,
-		"title":    u.config.UploadView.Title,
-		"author":   u.config.UploadView.Author,
-		"filename": u.config.UploadView.Filename,
+		"user-id":  u.Config().UploadView.UserId,
+		"title":    u.Config().UploadView.Title,
+		"author":   u.Config().UploadView.Author,
+		"filename": u.Config().UploadView.Filename,
 	}
 
-	err := u.config.AWSRepository.UploadChunks(
+	err := u.Config().AWSRepository.UploadChunks(
 		s3Prefix,
 		reader,
-		u.config.UploadView.ContentType,
+		u.Config().UploadView.ContentType,
 		metadata,
 		nil,
 	)
@@ -77,10 +83,10 @@ func (u *VideoUploader) UploadTemp(reader io.ReadCloser) (string, error) {
 	s3Prefix := u.FormatPrefix(aws_repository.TempFileRule)
 	tagging := aws_repository.TempFileRule
 
-	err := u.config.AWSRepository.UploadChunks(
+	err := u.Config().AWSRepository.UploadChunks(
 		s3Prefix,
 		reader,
-		u.config.UploadView.ContentType,
+		u.Config().UploadView.ContentType,
 		nil,
 		&tagging,
 	)
@@ -95,5 +101,5 @@ func (u *VideoUploader) UploadTemp(reader io.ReadCloser) (string, error) {
 func (u *VideoUploader) SetLabels(filename string) {
 	// todo: save labels in DynamoDB
 	// s3Prefix := u.FormatPrefix(filename)
-	// u.config.AWSRepository.StartVideoLabelsDetection(s3Prefix)
+	// u.Config().AWSRepository.StartVideoLabelsDetection(s3Prefix)
 }

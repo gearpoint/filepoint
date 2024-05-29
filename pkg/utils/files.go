@@ -8,7 +8,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 
 	"github.com/AleksK1NG/api-mc/pkg/httpErrors"
@@ -56,14 +55,15 @@ func GetFileBytes(fileHeader *multipart.FileHeader) ([]byte, error) {
 }
 
 // CreateTmpFile creates a new temporary file.
-func CreateTmpFile(c *gin.Context, file []byte) (string, error) {
+func CreateTmpFile(reader io.ReadCloser) (string, error) {
 	f, err := os.CreateTemp("", "")
 	if err != nil {
 		return "", err
 	}
 	defer f.Close()
 
-	if _, err := f.Write(file); err != nil {
+	_, err = io.Copy(f, reader)
+	if err != nil {
 		return "", err
 	}
 

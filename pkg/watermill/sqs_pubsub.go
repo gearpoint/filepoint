@@ -1,27 +1,25 @@
 package watermill
 
 import (
+	"context"
+
 	"github.com/ThreeDotsLabs/watermill-amazonsqs/sqs"
 	"github.com/ThreeDotsLabs/watermill/message"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/gearpoint/filepoint/config"
+	cfg "github.com/gearpoint/filepoint/config"
+	"github.com/gearpoint/filepoint/pkg/aws_repository"
 	"github.com/gearpoint/filepoint/pkg/logger"
 	"go.uber.org/zap"
 )
 
-func getAWSConfig(awsConfig *config.AWSConfig) aws.Config {
-	return aws.Config{
-		Endpoint: &awsConfig.Endpoint,
-		Region:   &awsConfig.Region,
-	}
-}
-
 // NewSQSPublisher creates a Publisher.
-func NewSQSPublisher(awsConfig *config.AWSConfig) (message.Publisher, error) {
-	cfg := getAWSConfig(awsConfig)
+func NewSQSPublisher(awsConfig *cfg.AWSConfig) (message.Publisher, error) {
+	sdkConfig, err := aws_repository.GetAWSConfig(context.Background(), awsConfig)
+	if err != nil {
+		return nil, err
+	}
 
 	publisherCfg := sqs.PublisherConfig{
-		AWSConfig: cfg,
+		AWSConfig: sdkConfig,
 		Marshaler: sqs.DefaultMarshalerUnmarshaler{},
 	}
 
@@ -40,15 +38,18 @@ func NewSQSPublisher(awsConfig *config.AWSConfig) (message.Publisher, error) {
 }
 
 // NewSQSSubscriber creates a Subscriber.
-func NewSQSSubscriber(awsConfig *config.AWSConfig) (message.Subscriber, error) {
-	cfg := getAWSConfig(awsConfig)
+func NewSQSSubscriber(awsConfig *cfg.AWSConfig) (message.Subscriber, error) {
+	sdkConfig, err := aws_repository.GetAWSConfig(context.Background(), awsConfig)
+	if err != nil {
+		return nil, err
+	}
 
 	subscriberCfg := sqs.SubscriberConfig{
-		AWSConfig:   cfg,
+		AWSConfig:   sdkConfig,
 		Unmarshaler: sqs.DefaultMarshalerUnmarshaler{},
 	}
 
-	subscriber, err := sqs.NewSubsciber(
+	subscriber, err := sqs.NewSubscriber(
 		subscriberCfg,
 		NewZapLoggerAdapter(logger.Logger),
 	)
