@@ -2,12 +2,16 @@ package aws_repository
 
 import (
 	"errors"
+	"sync"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
+	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/expression"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	"github.com/gearpoint/filepoint/internal/views"
+	"github.com/gearpoint/filepoint/pkg/logger"
+	"go.uber.org/zap"
 )
 
 // TableExists determines whether a DynamoDB table exists.
@@ -45,6 +49,10 @@ func (r *AWSRepository) GetTableRow(tableName string, schema views.DynamoDBSchem
 		return err
 	}
 
+	if response.Item == nil {
+		return errors.New("table row not found")
+	}
+
 	err = attributevalue.UnmarshalMap(response.Item, &schema)
 
 	return err
@@ -74,26 +82,21 @@ func (r *AWSRepository) UpdateTableRow(tableName string, schema views.DynamoDBSc
 		return err
 	}
 
-	// todo: fix logic
+	expr, err := expression.NewBuilder().WithUpdate(
+		schema.GetUpdateFields(),
+	).Build()
 
-	// var response *dynamodb.UpdateItemOutput
-	// var attributeMap map[string]map[string]interface{}
-
-	// update := expression.Set(expression.Name("info.rating"), expression.Value(schema.Info["rating"]))
-	// update.Set(expression.Name("info.plot"), expression.Value(movie.Info["plot"]))
-	// expr, err := expression.NewBuilder().WithUpdate(update).Build()
-
-	// if err != nil {
-	// 	return err
-	// }
+	if err != nil {
+		return err
+	}
 
 	_, err = r.dynamoClient.UpdateItem(r.ctx, &dynamodb.UpdateItemInput{
-		TableName: aws.String(tableName),
-		Key:       key,
-		// ExpressionAttributeNames:  expr.Names(),
-		// ExpressionAttributeValues: expr.Values(),
-		// UpdateExpression:          expr.Update(),
-		ReturnValues: types.ReturnValueUpdatedNew,
+		TableName:                 aws.String(tableName),
+		Key:                       key,
+		ExpressionAttributeNames:  expr.Names(),
+		ExpressionAttributeValues: expr.Values(),
+		UpdateExpression:          expr.Update(),
+		ReturnValues:              types.ReturnValueUpdatedNew,
 	})
 
 	return err
@@ -101,10 +104,74 @@ func (r *AWSRepository) UpdateTableRow(tableName string, schema views.DynamoDBSc
 
 // DelTableRow removes a row from the DynamoDB table.
 func (r *AWSRepository) DelTableRow(tableName string, schema views.DynamoDBSchema) error {
-	_, err := schema.GetKey()
+	key, err := schema.GetKey()
 	if err != nil {
 		return err
 	}
+
+	_, err = r.dynamoClient.DeleteItem(r.ctx, &dynamodb.DeleteItemInput{
+		Key: key, TableName: aws.String(tableName),
+	})
+
+	return err
+}
+
+// DelTableRow removes a whole partition from the DynamoDB table.
+func (r *AWSRepository) DelTablePartition(tableName string, partitionKey string, partitionValue string, schema views.DynamoDBSchema) error {
+	keyEx := expression.Key(partitionKey).Equal(expression.Value(partitionValue))
+	expr, err := expression.NewBuilder().WithKeyCondition(keyEx).Build()
+	if err != nil {
+		return err
+	}
+
+	queryPaginator := dynamodb.NewQueryPaginator(r.dynamoClient, &dynamodb.QueryInput{
+		TableName:                 aws.String(tableName),
+		ExpressionAttributeNames:  expr.Names(),
+		ExpressionAttributeValues: expr.Values(),
+		KeyConditionExpression:    expr.KeyCondition(),
+	})
+
+	var wg sync.WaitGroup
+
+	for queryPaginator.HasMorePages() {
+		res, err := queryPaginator.NextPage(r.ctx)
+		if err != nil {
+			logger.Error("Unable to search page of partitions",
+				zap.Error(err),
+			)
+			continue
+		}
+		for _, pageItem := range res.Items {
+			var itemSchema = schema
+
+			err = attributevalue.UnmarshalMap(pageItem, &itemSchema)
+			if err != nil {
+				logger.Error("Unable to unmarshal page for deletion",
+					zap.Error(err),
+				)
+				continue
+			}
+			wg.Add(1)
+			go func(itemSchema views.DynamoDBSchema) {
+				key, err := itemSchema.GetKey()
+				if err != nil {
+					return
+				}
+				defer wg.Done()
+				_, err = r.dynamoClient.DeleteItem(r.ctx, &dynamodb.DeleteItemInput{
+					Key: key, TableName: aws.String(tableName),
+				})
+				if err != nil {
+					logger.Error("Unable to delete item",
+						zap.String("tableName", tableName),
+						zap.Any("tableKey", key),
+						zap.Error(err),
+					)
+				}
+			}(itemSchema)
+		}
+	}
+	wg.Wait()
 
 	return nil
 }

@@ -81,7 +81,6 @@ func (h *UploadHandler) ProccessUploadMessages() message.HandlerFunc {
 
 		err = h.handleUpload(msg, uploadPubSub)
 		if err != nil {
-			logger.Error(err.Error())
 			return nil, err
 		}
 
@@ -124,6 +123,21 @@ func (h *UploadHandler) handleUpload(msg *message.Message, uploadPubSub *views.U
 
 	ctx := logger.NewContext(msg.Context(), zap.Any("s3Prefix", s3Prefix))
 	logger := logger.WithContext(ctx)
+
+	schema := &views.DynamoDBUploadSchema{
+		UserId: uploadPubSub.UserId,
+		Prefix: s3Prefix,
+	}
+	err := h.awsRepository.GetTableRow(
+		h.tableName, schema,
+	)
+	if err != nil {
+		logger.Error("error retrieving table info from DB",
+			zap.String("tableName", h.tableName),
+			zap.Error(err),
+		)
+		return errors.New("error retrieving table info from DB")
+	}
 
 	uploader, err := uploader.GetUploaderByEventType(eventType)
 	if err != nil {
@@ -205,21 +219,19 @@ func (h *UploadHandler) handleUpload(msg *message.Message, uploadPubSub *views.U
 		return errors.New("file could not be uploaded")
 	}
 
-	// err = h.awsRepository.UpdateTableRow(
-	// 	h.tableName, views.DynamoDBUploadSchema{
-	// 		UserId:         uploadPubSub.UserId,
-	// 		Prefix:         s3Prefix,
-	// 		DefinitionsMap: definitionsMap,
-	// 	},
-	// )
-	// if err != nil {
-	// 	logger.Error("error updating table row",
-	// 		zap.Any("tableName", h.tableName),
-	// 		zap.Any("userId", uploadPubSub.UserId),
-	// 		zap.Error(err),
-	// 	)
-	// 	return errors.New("unable to update file data in DB")
-	// }
+	schema.DefinitionsMap = definitionsMap
+
+	err = h.awsRepository.UpdateTableRow(
+		h.tableName, schema,
+	)
+	if err != nil {
+		logger.Error("error updating table row",
+			zap.Any("tableName", h.tableName),
+			zap.Any("userId", uploadPubSub.UserId),
+			zap.Error(err),
+		)
+		return errors.New("unable to update file data in DB")
+	}
 
 	return nil
 }

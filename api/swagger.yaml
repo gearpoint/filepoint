@@ -9,15 +9,25 @@ definitions:
       message:
         type: string
     type: object
+  utils.FileDefinitions:
+    enum:
+    - 0
+    - 1
+    - 2
+    type: integer
+    x-enum-varnames:
+    - LowDef
+    - MediumDef
+    - HighDef
   views.GetSignedURLResponse:
     properties:
       expires:
         type: string
-      labels:
-        items:
-          type: string
-        type: array
       metadata:
+        additionalProperties:
+          type: string
+        type: object
+      tagging:
         additionalProperties:
           type: string
         type: object
@@ -28,6 +38,8 @@ definitions:
     type: object
   views.ListObjectsRequest:
     properties:
+      definition:
+        $ref: '#/definitions/utils.FileDefinitions'
       prefixes:
         items:
           type: string
@@ -62,7 +74,7 @@ paths:
     delete:
       description: Deletes the file
       parameters:
-      - description: File prefix
+      - description: File folder prefix
         in: query
         name: prefix
         required: true
@@ -98,11 +110,19 @@ paths:
     get:
       description: Returns the file signed URL
       parameters:
-      - description: File prefix
+      - description: File folder prefix
         in: query
         name: prefix
         required: true
         type: string
+      - description: File definition config
+        enum:
+        - 0
+        - 1
+        - 2
+        in: query
+        name: definition
+        type: integer
       produces:
       - application/json
       responses:
@@ -161,8 +181,8 @@ paths:
           description: Accepted
           headers:
             Webhook-Request-Body:
-              description: views.WebhookPayload{Id:"X-Request-Id", Success:true, Location:"{location}",
-                Labels:[]string{}, Error:""}
+              description: views.WebhookPayload{Id:"X-Request-Id", Success:true, CorrelationId:"",
+                Location:"{location}", Error:""}
               type: object
             X-Request-Id:
               description: Request ID (UUID)
@@ -188,7 +208,7 @@ paths:
     delete:
       description: Deletes all files from prefix
       parameters:
-      - description: File prefix
+      - description: File folder prefix
         in: query
         name: prefix
         required: true
@@ -257,7 +277,7 @@ paths:
             X-Request-Id:
               description: Request ID (UUID)
               type: string
-      summary: List files URLs
+      summary: List files URLs from a folder
       tags:
       - Upload
   /upload/list:
@@ -266,9 +286,9 @@ paths:
       - application/json
       description: Returns the files signed URLs
       parameters:
-      - description: prefixes
+      - description: List objects request body
         in: body
-        name: prefixes
+        name: ListObjectsRequest
         required: true
         schema:
           $ref: '#/definitions/views.ListObjectsRequest'

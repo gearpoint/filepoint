@@ -14,7 +14,3 @@ awslocal dynamodb create-table \
           AttributeName=userId,AttributeType=S \
           AttributeName=prefix,AttributeType=S \
      --provisioned-throughput ReadCapacityUnits=5,WriteCapacityUnits=5
-          # AttributeName=requestId,AttributeType=S \
-          # AttributeName=correlationId,AttributeType=S \
-          # AttributeName=definitionsMap,AttributeType=B \
-          # AttributeName=fileLabels,AttributeType=B \

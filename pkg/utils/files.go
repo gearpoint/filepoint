@@ -6,6 +6,9 @@ import (
 	"mime/multipart"
 	"net/textproto"
 	"os"
+	"path/filepath"
+	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/google/uuid"
@@ -90,33 +93,73 @@ func CreatePrefix(parts ...string) string {
 }
 
 // GetUniquePrefix returns an unique folder prefix.
-func GetUniquePrefix(userId string) string {
+// It concatenates the given prefix string with a generated uuid.
+func GetUniquePrefix(prefix string) string {
 	randString := uuid.New().String()
 
-	return CreatePrefix(userId, randString)
+	return CreatePrefix(prefix, randString)
 }
 
 // CheckPrefixIsFolder checks if the prefix is a folder.
+// It verifies if the given prefix contains a file extension.
 func CheckPrefixIsFolder(prefix string) bool {
-	split := strings.Split(prefix, ".")
+	extension := filepath.Ext(prefix)
 
-	return len(split) == 1
+	return len(extension) == 0
 }
 
-// GetPrefixFolder returns the prefix folder.
-func GetPrefixFolder(prefix string) string {
+// GetPrefixFolder returns the prefix folder and the sub folder depth.
+// i.e:
+//
+// prefix := "my/prefix/test.txt"
+// GetPrefixFolder(prefix) > "my/prefix", 2
+func GetPrefixFolder(prefix string) (string, int) {
 	split := strings.Split(
 		strings.Trim(prefix, "/"), "/",
 	)
 
 	if len(split) == 1 {
-		return ""
+		return "", 0
 	}
 
 	var prefixes []string
-	for i := 0; i < len(split)-2; i++ {
+	for i := 0; i <= len(split)-2; i++ {
 		prefixes = append(prefixes, split[i])
 	}
 
-	return CreatePrefix(prefixes...)
+	return CreatePrefix(prefixes...), len(prefixes)
+}
+
+// AtoFileDefinitions converts ascii to FileDefinitions.
+func AtoFileDefinitions(def string) FileDefinitions {
+	var definition FileDefinitions = MediumDef
+
+	iDefinition, err := strconv.Atoi(def)
+	if err == nil {
+		definition = FileDefinitions(iDefinition)
+	}
+
+	return definition
+}
+
+// GetClosestPrefix returns the prefix with the closest definition (or exact if possible).
+func GetClosestPrefix(definitionsMap FileDefinitionsMapping, definition FileDefinitions) string {
+	keys := make([]int, 0, len(definitionsMap))
+
+	for k := range definitionsMap {
+		keys = append(keys, int(k))
+	}
+	sort.Ints(keys)
+
+	smallestKey := FileDefinitions(keys[0])
+	if definition < smallestKey {
+		return definitionsMap[smallestKey]
+	}
+
+	greaterKey := FileDefinitions(keys[len(keys)-1])
+	if definition > greaterKey {
+		return definitionsMap[greaterKey]
+	}
+
+	return definitionsMap[definition]
 }

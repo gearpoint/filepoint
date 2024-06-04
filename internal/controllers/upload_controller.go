@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"mime/multipart"
 	"net/http"
-	"strconv"
 	"sync"
 	"time"
 
@@ -223,26 +222,25 @@ func (u *UploadController) uploadWorker(eventType strategies.EventTypeKey, uploa
 // @Router /upload [get]
 func (u *UploadController) GetSignedURL(c *gin.Context) {
 	prefix := c.Request.URL.Query().Get("prefix")
-	if prefix == "" || utils.CheckPrefixIsFolder(prefix) {
+	if prefix == "" || !utils.CheckPrefixIsFolder(prefix) {
 		abortWithBadRequest(c, "the file prefix is required", "you must provide a valid file prefix")
 		return
 	}
 
-	var definition utils.FileDefinitions = utils.MediumDef
-
-	iDefinition, err := strconv.Atoi(c.Request.URL.Query().Get("definition"))
-	if err == nil {
-		definition = utils.FileDefinitions(iDefinition)
+	userId, depth := utils.GetPrefixFolder(prefix)
+	if depth != 1 {
+		abortWithBadRequest(c, "the file prefix is required", "you must provide a valid file prefix")
+		return
 	}
 
 	schema := &views.DynamoDBUploadSchema{
-		UserId: utils.GetPrefixFolder(prefix),
+		UserId: userId,
 		Prefix: prefix,
 	}
 
-	err = u.awsRepository.GetTableRow(u.tableName, schema)
+	err := u.awsRepository.GetTableRow(u.tableName, schema)
 	if err != nil {
-		logger.Error("error retrieving prefix info",
+		logger.Error("error retrieving prefix info from DB",
 			zap.Any("prefix", prefix),
 			zap.Error(err),
 		)
@@ -250,9 +248,10 @@ func (u *UploadController) GetSignedURL(c *gin.Context) {
 		return
 	}
 
-	prefix = utils.CreatePrefix(prefix, schema.DefinitionsMap[definition])
+	definition := utils.AtoFileDefinitions(c.Request.URL.Query().Get("definition"))
+	completePrefix := utils.GetClosestPrefix(schema.DefinitionsMap, definition)
 
-	cached, err := u.cacheControl.SignedURLCacheControl.GetBytes(c, prefix)
+	cached, err := u.cacheControl.SignedURLCacheControl.GetBytes(c, completePrefix)
 	if err == nil {
 		c.Data(http.StatusOK, gin.MIMEJSON, cached)
 		return
@@ -275,7 +274,7 @@ func (u *UploadController) GetSignedURL(c *gin.Context) {
 		return
 	}
 
-	u.cacheControl.SignedURLCacheControl.AddBytes(c, prefix, jsonResponse)
+	u.cacheControl.SignedURLCacheControl.AddBytes(c, completePrefix, jsonResponse)
 
 	if response.Temporary {
 		abortWithBadRequest(c, "temporary file")
@@ -314,8 +313,7 @@ func (u *UploadController) ListFolder(c *gin.Context) {
 // @Description Returns the files signed URLs
 // @Tags Upload
 // @Accept json
-// @Param prefixes body views.ListObjectsRequest.Prefixes true "Folder prefixes"
-// @Param definition body views.ListObjectsRequest.Definition false "File definition config"
+// @Param ListObjectsRequest body views.ListObjectsRequest true "List files URLs request body"
 // @Produce json
 // @Success 200 {object} []views.ListSignedURLResponse
 // @Failure 400 {object} http_utils.RestError
@@ -326,13 +324,52 @@ func (u *UploadController) ListObjects(c *gin.Context) {
 	request := &views.ListObjectsRequest{}
 	err := http_utils.ReadRequest(c, request)
 	if err != nil || request.Prefixes == nil {
-		abortWithBadRequest(c, "the prefixes are required", "you must provide valid prefixes")
+		abortWithBadRequest(c, "the prefixes are required", "you must provide valid prefixes and a valid file definition")
 		return
 	}
 
-	// todo: get file definition config
+	var completePrefixes []string
 
-	response := u.listPrefixes(c, request.Prefixes)
+	var mu sync.Mutex
+	var wg sync.WaitGroup
+
+	for _, prefix := range request.Prefixes {
+		wg.Add(1)
+		go func(prefix string) {
+			defer wg.Done()
+			userId, depth := utils.GetPrefixFolder(prefix)
+			if depth != 1 {
+				logger.Error("unable to retrieve userId",
+					zap.String("prefix", prefix),
+				)
+				return
+			}
+
+			schema := &views.DynamoDBUploadSchema{
+				UserId: userId,
+				Prefix: prefix,
+			}
+
+			err := u.awsRepository.GetTableRow(u.tableName, schema)
+			if err != nil {
+				logger.Error("error retrieving prefix info from DB",
+					zap.Any("prefix", prefix),
+					zap.Error(err),
+				)
+				return
+			}
+
+			completePrefix := utils.GetClosestPrefix(schema.DefinitionsMap, request.Definition)
+
+			mu.Lock()
+			completePrefixes = append(completePrefixes, completePrefix)
+			mu.Unlock()
+		}(prefix)
+	}
+
+	wg.Wait()
+
+	response := u.listPrefixes(c, completePrefixes)
 
 	c.JSON(http.StatusOK, response)
 }
@@ -463,18 +500,44 @@ func (u *UploadController) listPrefixes(c context.Context, prefixes []string) []
 // @Router /upload [delete]
 func (u *UploadController) Delete(c *gin.Context) {
 	prefix := c.Request.URL.Query().Get("prefix")
-	if prefix == "" || utils.CheckPrefixIsFolder(prefix) {
+	userId, depth := utils.GetPrefixFolder(prefix)
+
+	if prefix == "" || !utils.CheckPrefixIsFolder(prefix) || depth != 1 {
 		abortWithBadRequest(c, "the file prefix is required", "you must provide a valid file prefix")
 		return
 	}
 
-	// todo: foreachhhhh object
-	err := u.awsRepository.DeleteObject(prefix)
+	schema := &views.DynamoDBUploadSchema{
+		UserId: userId,
+		Prefix: prefix,
+	}
+	err := u.awsRepository.GetTableRow(u.tableName, schema)
 	if err != nil {
-		abortWithBadRequest(c, "error deleting file", err.Error())
+		logger.Error("error retrieving prefix info from DB",
+			zap.Any("prefix", prefix),
+			zap.Error(err),
+		)
+		abortWithBadRequest(c, "error retrieving prefix info")
 		return
 	}
 
+	for _, filePrefix := range schema.DefinitionsMap {
+		err = u.awsRepository.DeleteObject(filePrefix)
+		if err != nil {
+			logger.Error("error deleting object storage",
+				zap.Any("prefix", prefix),
+				zap.Error(err),
+			)
+		}
+	}
+
+	u.awsRepository.DelTableRow(u.tableName, schema)
+	if err != nil {
+		logger.Error("error deleting prefix info from DB",
+			zap.Any("prefix", prefix),
+			zap.Error(err),
+		)
+	}
 	u.cacheControl.RemoveKeyFromCachedPrefixes(c, prefix)
 
 	c.String(http.StatusOK, "OK")
@@ -500,7 +563,13 @@ func (u *UploadController) DeleteAll(c *gin.Context) {
 
 	prefixes := u.getFolderPrefixesFullDepth(c, prefix)
 	if len(prefixes) > 0 {
-		err := u.awsRepository.DeleteMany(prefixes)
+		// the prefix must be a valid userId otherwise will not exclude.
+		err := u.awsRepository.DelTablePartition(u.tableName, "userId", prefix, &views.DynamoDBUploadSchema{})
+		if err != nil {
+			abortWithBadRequest(c, "error deleting files information", err.Error())
+			return
+		}
+		err = u.awsRepository.DeleteMany(prefixes)
 		if err != nil {
 			abortWithBadRequest(c, "error deleting files", err.Error())
 			return

@@ -92,6 +92,7 @@ func (u *ImageUploader) getProccessingOptions(definition utils.FileDefinitions) 
 		Embed:        true,
 		NoAutoRotate: true,
 		Force:        false,
+		Enlarge:      true,
 		Quality:      85,
 	}
 
@@ -105,11 +106,11 @@ func (u *ImageUploader) getProccessingOptions(definition utils.FileDefinitions) 
 		},
 		utils.MediumDef: func() bimg.Options {
 			options.Height = 720
+			options.Compression = 10
 			return options
 		},
 		utils.HighDef: func() bimg.Options {
 			options.Height = 1920
-			options.Enlarge = true
 			return options
 		},
 	}

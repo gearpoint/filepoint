@@ -34,8 +34,8 @@ func (c *UploadCacheControl) RemoveFolderFromCache(ctx context.Context, prefixes
 func (c *UploadCacheControl) RemoveKeyFromCachedPrefixes(ctx context.Context, prefix string) {
 	c.SignedURLCacheControl.Del(ctx, prefix)
 
-	prefixesKey := utils.GetPrefixFolder(prefix)
-	if prefixesKey == "" {
+	prefixesKey, depth := utils.GetPrefixFolder(prefix)
+	if depth == 0 {
 		return
 	}
 

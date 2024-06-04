@@ -79,7 +79,7 @@ func (r *AWSRepository) GetSignedObject(prefix string) (*views.GetSignedURLRespo
 	expires := time.Now().Add(SignExpiration)
 
 	if utils.IsDevEnvironment() {
-		url := fmt.Sprintf("%s/%s", r.config.Endpoint, prefix)
+		url := fmt.Sprintf("%s/%s/%s", r.config.Endpoint, r.config.Bucket, prefix)
 		return &views.GetSignedURLResponse{
 			Url:       url,
 			Metadata:  obj.Metadata,

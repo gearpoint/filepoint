@@ -6,7 +6,7 @@ require (
 	github.com/AleksK1NG/api-mc v0.0.0-20210222141237-4ffdf6a3d5cb
 	github.com/ThreeDotsLabs/watermill v1.3.5
 	github.com/ThreeDotsLabs/watermill-amazonsqs v0.0.3
-	github.com/aws/aws-sdk-go v1.53.11
+	github.com/aws/aws-sdk-go-v2/feature/dynamodb/expression v1.7.20
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.54.3
 	github.com/gin-contrib/requestid v1.0.2
 	github.com/gin-contrib/zap v1.1.3

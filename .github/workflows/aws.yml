@@ -33,7 +33,6 @@ jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
-    environment: production
     needs: get_version
 
     steps:
@@ -70,13 +69,12 @@ jobs:
     - name: Build, tag, and push image to Amazon ECR
       run: |
         make build-images
-        make publish-filepoint && publish-filepoint TAG=latest
-        make publish-webhooks-sender && publish-filepoint TAG=latest
+        make publish-filepoint && make publish-filepoint TAG=latest
+        make publish-webhooks-sender && make publish-filepoint TAG=latest
 
   deploy_filepoint:
     name: Deploy Filepoint
     runs-on: ubuntu-latest
-    environment: production
     needs:
       - get_version
       - build
@@ -110,7 +108,7 @@ jobs:
       with:
         task-definition: filepoint-task.json
         container-name: ${{ env.CONTAINER_NAME }}
-        image: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ needs.get_version.outputs.current-version }}
+        image: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:latest
 
     - name: updating task-definition file
       run: cat ${{ steps.task-def.outputs.task-definition }} > filepoint-task.json
@@ -126,7 +124,6 @@ jobs:
   deploy_filepoint_webhooks:
     name: Deploy Filepoint Webhooks Sender
     runs-on: ubuntu-latest
-    environment: production
     needs:
       - get_version
       - build
@@ -160,7 +157,7 @@ jobs:
       with:
         task-definition: filepoint-webhooks-task.json
         container-name: ${{ env.CONTAINER_NAME }}
-        image: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ needs.get_version.outputs.current-version }}
+        image: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:latest
 
     - name: updating task-definition file
       run: cat ${{ steps.task-def.outputs.task-definition }} > filepoint-webhooks-task.json

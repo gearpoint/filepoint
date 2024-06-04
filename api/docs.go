@@ -52,10 +52,21 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "File prefix",
+                        "description": "File folder prefix",
                         "name": "prefix",
                         "in": "query",
                         "required": true
+                    },
+                    {
+                        "enum": [
+                            0,
+                            1,
+                            2
+                        ],
+                        "type": "integer",
+                        "description": "File definition config",
+                        "name": "definition",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -140,7 +151,7 @@ const docTemplate = `{
                         "headers": {
                             "Webhook-Request-Body": {
                                 "type": "object",
-                                "description": "views.WebhookPayload{Id:\"X-Request-Id\", Success:true, Location:\"{location}\", Labels:[]string{}, Error:\"\"}"
+                                "description": "views.WebhookPayload{Id:\"X-Request-Id\", Success:true, CorrelationId:\"\", Location:\"{location}\", Error:\"\"}"
                             },
                             "X-Request-Id": {
                                 "type": "string",
@@ -183,7 +194,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "File prefix",
+                        "description": "File folder prefix",
                         "name": "prefix",
                         "in": "query",
                         "required": true
@@ -239,7 +250,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "File prefix",
+                        "description": "File folder prefix",
                         "name": "prefix",
                         "in": "query",
                         "required": true
@@ -291,7 +302,7 @@ const docTemplate = `{
                 "tags": [
                     "Upload"
                 ],
-                "summary": "List files URLs",
+                "summary": "List files URLs from a folder",
                 "parameters": [
                     {
                         "type": "string",
@@ -356,8 +367,8 @@ const docTemplate = `{
                 "summary": "List files URLs",
                 "parameters": [
                     {
-                        "description": "prefixes",
-                        "name": "prefixes",
+                        "description": "List objects request body",
+                        "name": "ListObjectsRequest",
                         "in": "body",
                         "required": true,
                         "schema": {
@@ -421,19 +432,32 @@ const docTemplate = `{
                 }
             }
         },
+        "utils.FileDefinitions": {
+            "type": "integer",
+            "enum": [
+                0,
+                1,
+                2
+            ],
+            "x-enum-varnames": [
+                "LowDef",
+                "MediumDef",
+                "HighDef"
+            ]
+        },
         "views.GetSignedURLResponse": {
             "type": "object",
             "properties": {
                 "expires": {
                     "type": "string"
                 },
-                "labels": {
-                    "type": "array",
-                    "items": {
+                "metadata": {
+                    "type": "object",
+                    "additionalProperties": {
                         "type": "string"
                     }
                 },
-                "metadata": {
+                "tagging": {
                     "type": "object",
                     "additionalProperties": {
                         "type": "string"
@@ -450,6 +474,9 @@ const docTemplate = `{
         "views.ListObjectsRequest": {
             "type": "object",
             "properties": {
+                "definition": {
+                    "$ref": "#/definitions/utils.FileDefinitions"
+                },
                 "prefixes": {
                     "type": "array",
                     "items": {

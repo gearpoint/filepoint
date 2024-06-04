@@ -64,8 +64,8 @@ func (c *PrefixesCacheControl) AddKeyToCachedPrefixes(ctx context.Context, prefi
 		return
 	}
 
-	prefixesKey := utils.GetPrefixFolder(prefix)
-	if prefixesKey == "" {
+	prefixesKey, depth := utils.GetPrefixFolder(prefix)
+	if depth == 0 {
 		return
 	}
 
