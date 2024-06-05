@@ -367,7 +367,7 @@ const docTemplate = `{
                 "summary": "List files URLs",
                 "parameters": [
                     {
-                        "description": "List objects request body",
+                        "description": "List files URLs request body",
                         "name": "ListObjectsRequest",
                         "in": "body",
                         "required": true,

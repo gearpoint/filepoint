@@ -18,6 +18,15 @@ import (
 	"go.uber.org/zap"
 )
 
+const (
+	// Temporary file rule. This rule must be configured at the defined bucket.
+	// You can set, for example, a 1 day exclusion policy.
+	TempFileRule = "temporary-file"
+
+	// Signed url expiration time. The cache time will be based in this value also.
+	SignExpiration = 12 * time.Hour
+)
+
 // PutObject puts a new object in the given prefix.
 // Do not use it for large files.
 func (r *AWSRepository) PutObject(prefix string, file io.Reader, contentType string, metadata map[string]string, tagging *string) error {
@@ -79,7 +88,7 @@ func (r *AWSRepository) GetSignedObject(prefix string) (*views.GetSignedURLRespo
 	expires := time.Now().Add(SignExpiration)
 
 	if utils.IsDevEnvironment() {
-		url := fmt.Sprintf("%s/%s/%s", r.config.Endpoint, r.config.Bucket, prefix)
+		url := fmt.Sprintf("%s/%s/%s", r.config.CloudfrontDist, r.config.Bucket, prefix)
 		return &views.GetSignedURLResponse{
 			Url:       url,
 			Metadata:  obj.Metadata,

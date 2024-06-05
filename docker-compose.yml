@@ -4,12 +4,18 @@ services:
     container_name: redis
     ports:
       - "6379:6379"
+    healthcheck:
+      test: [ "CMD", "redis-cli", "--raw", "incr", "ping" ]
     restart: always
   filepoint:
     image: "filepoint"
     container_name: filepoint
     restart: unless-stopped
-    # depends_on:
+    depends_on:
+      localstack:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     #   kafka:
     #     condition: service_healthy
     ports:
@@ -27,7 +33,11 @@ services:
     image: "filepoint-webhooks-sender"
     container_name: filepoint-webhooks-sender
     restart: unless-stopped
-    # depends_on:
+    depends_on:
+      localstack:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     #   kafka:
     #     condition: service_healthy
     build:
@@ -43,13 +53,7 @@ services:
     container_name: localstack
     image: localstack/localstack
     healthcheck:
-      test: [
-        "CMD",
-        "awslocal dynamodb list-tables",
-        "awslocal s3 ls",
-        "awslocal sns list-topics",
-        "awslocal sqs list-topics"
-      ]
+      test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]
       interval: 3s
       timeout: 10s
     environment:
@@ -60,4 +64,37 @@ services:
     ports:
       - "4566:4566"
     volumes:
-      - "scripts/init-aws.sh:/etc/localstack/init/ready.d/init-aws.sh"
+      - "./scripts/init-aws.sh:/etc/localstack/init/ready.d/init-aws.sh"
+  laravel-echo-server:
+    image: "webhooksite/laravel-echo-server"
+    environment:
+      - LARAVEL_ECHO_SERVER_AUTH_HOST=http://localhost
+      - LARAVEL_ECHO_SERVER_HOST=0.0.0.0
+      - LARAVEL_ECHO_SERVER_PORT=6001
+      - ECHO_REDIS_PORT=6379
+      - ECHO_REDIS_HOSTNAME=redis
+      - ECHO_PROTOCOL=http
+      - ECHO_ALLOW_CORS=true
+      - ECHO_ALLOW_ORIGIN=*
+      - ECHO_ALLOW_METHODS=*
+      - ECHO_ALLOW_HEADERS=*
+  webhook_site:
+    container_name: webhook_site
+    image: "webhooksite/webhook.site"
+    command: php artisan queue:work --daemon --tries=3 --timeout=10
+    ports:
+      - "8084:80"
+    environment:
+      - APP_ENV=dev
+      - APP_DEBUG=true
+      - APP_URL=http://localhost:8084
+      - APP_LOG=errorlog
+      - DB_CONNECTION=sqlite
+      - REDIS_HOST=redis
+      - BROADCAST_DRIVER=redis
+      - CACHE_DRIVER=redis
+      - QUEUE_DRIVER=redis
+      - ECHO_HOST_MODE=path
+    depends_on:
+      - redis
+      - laravel-echo-server

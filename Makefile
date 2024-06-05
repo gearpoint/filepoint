@@ -6,16 +6,27 @@ else
 	TAGS=
 endif
 
-default: clean test build-local
+default: clean test build-binary
 
 # Running outside a container requires extra config. Checkout readme for more info.
 .PHONY: run
 run:
 	go run cmd/filepoint/main.go -config config/config-local.yaml
 
+# Running outside a container requires extra config. Checkout readme for more info.
 .PHONY: run-webhooks-sender
 run-webhooks-sender:
 	go run cmd/filepoint-webhooks-sender/main.go -config config/config-local.yaml
+
+# This command will run only required services, that's useful if you'd
+# like to launch the application locally (see the commands above).
+.PHONY: run-services
+run-services:
+	docker compose up localstack \
+    redis \
+    webhook_site \
+	laravel-echo-server
+# optional: && docker compose -f docker-compose-kafka.yml up
 
 .PHONY: deps
 deps:
@@ -29,6 +40,7 @@ clean:
 prepare:
 	chmod +x scripts/* && scripts/prepare.sh
 
+# Executes the build-binary script. Warning: used in the Dockerfile.
 .PHONY: build-binary
 build-binary: prepare
 	scripts/build-binary.sh ${VERSION} ${TAGS}
@@ -47,26 +59,31 @@ integration-test: prepare
 generate:
 	go generate ./...
 
+# Creates swagger docs. Needs Swaggo installed.
 .PHONY: swagger
 swagger:
 	swag init -g cmd/filepoint/main.go --output api
 
+# Launches the godoc server. Needs godoc installed.
 .PHONY: godoc
 godoc:
 	godoc -http=:6060
 
-REPOSITORY = "029272547936.dkr.ecr.us-east-1.amazonaws.com"
+REPOSITORY = "localhost" # change this if production, i.e AWS ECR
 
 BASE_TAG = ${REPOSITORY}/prod-filepoint-base-repo:latest
 .PHONY: build-base
 build-base:
-	docker build --tag ${BASE_TAG} -f "build/base/docker/Dockerfile" . \
-	&& docker push ${BASE_TAG}
+	docker build --tag ${BASE_TAG} -f "build/base/docker/Dockerfile" .
+
+.PHONY: publish-base
+publish-base:
+	docker push ${BASE_TAG}
 
 # The configuration file to be used.
 # Important: if you pretend to use it in a Docker container for development,
-# you can set this as a volume or build this with ""config/config.yaml" instead.
-CONFIG_FILE = "config/config-prod.yaml"
+# you can set this as a volume or build this with "config/config.yaml" instead.
+CONFIG_FILE = "config/config.yaml"
 
 # TAG controls the image tagging.
 # You can use ${VERSION} or "latest"

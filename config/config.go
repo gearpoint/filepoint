@@ -86,6 +86,7 @@ func LoadConfig(path string) (*viper.Viper, error) {
 	v := viper.New()
 	v.SetConfigFile(path)
 	v.AddConfigPath(".")
+	v.AutomaticEnv()
 
 	v.SetDefault("Server.Addr", utils.GetEnv(utils.AddrKey))
 	v.SetDefault("AWSConfig.CloudfrontKeyId", utils.GetEnv(utils.CloudfrontKeyId))

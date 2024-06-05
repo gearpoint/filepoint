@@ -5,7 +5,6 @@ import (
 	"crypto/rsa"
 	"errors"
 	"net/http"
-	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	awshttp "github.com/aws/aws-sdk-go-v2/aws/transport/http"
@@ -16,13 +15,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	cfg "github.com/gearpoint/filepoint/config"
 	"github.com/gearpoint/filepoint/pkg/utils"
-)
-
-const (
-	// Temporary file rule. This rule must be configured at the defined bucket.
-	TempFileRule = "temporary-file"
-	// Signed url expiration time.
-	SignExpiration = 12 * time.Hour
 )
 
 // The Rekognition unsuported locations.
@@ -59,9 +51,12 @@ func NewAWSRepository(awsConfig *cfg.AWSConfig, ctx context.Context) (*AWSReposi
 
 	dynamoClient := dynamodb.NewFromConfig(sdkConfig)
 
-	rsaKey, err := getPrivateKey(awsConfig.CloudfrontCrtFile)
-	if err != nil {
-		return nil, err
+	var rsaKey rsa.PrivateKey
+	if !utils.IsDevEnvironment() {
+		rsaKey, err = getPrivateKey(awsConfig.CloudfrontCrtFile)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return &AWSRepository{
@@ -71,7 +66,7 @@ func NewAWSRepository(awsConfig *cfg.AWSConfig, ctx context.Context) (*AWSReposi
 		rekoClient:           rekoClient,
 		dynamoClient:         dynamoClient,
 		cloudfrontDist:       awsConfig.CloudfrontDist,
-		cloudfrontPrivateKey: *rsaKey,
+		cloudfrontPrivateKey: rsaKey,
 	}, nil
 }
 
@@ -104,8 +99,9 @@ func getEndpointResolver(awsConfig *cfg.AWSConfig) config.LoadOptionsFunc {
 }
 
 // getPrivateKey returns a private key from a file path.
-func getPrivateKey(filepath string) (*rsa.PrivateKey, error) {
-	return sign.LoadPEMPrivKeyFile(filepath)
+func getPrivateKey(filepath string) (rsa.PrivateKey, error) {
+	key, err := sign.LoadPEMPrivKeyFile(filepath)
+	return *key, err
 }
 
 // CheckIsNotFoundError checks if the aws error is not found.

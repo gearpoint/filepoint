@@ -257,7 +257,7 @@ func (u *UploadController) GetSignedURL(c *gin.Context) {
 		return
 	}
 
-	response, err := u.awsRepository.GetSignedObject(prefix)
+	response, err := u.awsRepository.GetSignedObject(completePrefix)
 	if err != nil {
 		if aws_repository.CheckIsNotFoundError(err) {
 			abortWithNotFound(c, "prefix not found")

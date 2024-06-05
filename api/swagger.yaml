@@ -286,7 +286,7 @@ paths:
       - application/json
       description: Returns the files signed URLs
       parameters:
-      - description: List objects request body
+      - description: List files URLs request body
         in: body
         name: ListObjectsRequest
         required: true

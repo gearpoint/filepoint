@@ -10,17 +10,17 @@ Routes:
     TableName: "filepoint_upload"
     Topic: "filepoint_upload_queueing"
     PoisonTopic: "filepoint_upload_queueing_poison"
-    WebhookURL: "http://localhost:8000/filepoint-webhooks/upload"
+    WebhookURL: "http://webhook_site:80/d07d74d5-a5cd-4b5a-b44f-5a52e4f2e069" # http://webhook_site:8084/{{ your_unique_id }}
     MaxRetries: 50
 
 AWSConfig:
-  Endpoint: "http://localstack:4566"
+  Endpoint: "http://localstack:4566" # if empty, will use AWS default endpoint.
   Bucket: "filepoint-us"
   Region: "us-east-1"
-  CloudfrontCrtFile: ".aws/filepoint-cloudfront.pem"
-  CloudfrontDist: "https://d1dczmkof7ci1q.cloudfront.net"
-  VideoLabelingTopic: "arn:aws:sns:sa-east-1:029272547936:filepoint-video-labeling"
-  RekognitionRole: "arn:aws:iam::526264782134:role/filepoint-rekognition-access"
+  CloudfrontCrtFile: "" # required if using AWS in production
+  CloudfrontDist: "http://localhost:4566" # required if using AWS in production
+  VideoLabelingTopic: "" # todo
+  RekognitionRole: ""  # todo
 
 StreamingConfig:
   MessagesPerSecond: 100
