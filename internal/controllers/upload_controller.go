@@ -100,6 +100,12 @@ func (u *UploadController) Upload(c *gin.Context) {
 		return
 	}
 
+	// Validate file signature (magic bytes) matches content type
+	if err := utils.ValidateFile(fileHeader, contentType); err != nil {
+		abortWithBadRequest(c, "file validation failed", err.Error())
+		return
+	}
+
 	eventType, uploader, err := uploader.GetUploaderByContentType(contentType)
 	if err != nil {
 		abortWithBadRequest(c, "error validating file content type", err.Error())
