@@ -8,6 +8,8 @@ import (
 	"github.com/gearpoint/filepoint/config"
 	"github.com/gearpoint/filepoint/internal/middlewares"
 	"github.com/gearpoint/filepoint/pkg/aws_repository"
+	"github.com/gearpoint/filepoint/pkg/logger"
+	"github.com/gearpoint/filepoint/pkg/metrics"
 	"github.com/gearpoint/filepoint/pkg/redis"
 	"github.com/gin-gonic/gin"
 )
@@ -62,9 +64,13 @@ func (s *Server) Run() error {
 
 	gin.SetMode(mode)
 
+	// Initialize metrics
+	metrics.Init("filepoint")
+
 	s.Engine.Use(
 		middlewares.RequestIdMiddleware(),
 		middlewares.LoggerMiddleware(),
+		middlewares.MetricsMiddleware(),
 		gin.Recovery(),
 	)
 
