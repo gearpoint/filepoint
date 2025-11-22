@@ -1,6 +1,6 @@
 # Filepoint
 
-Filepoint is the Gearpoint's file management service. It's built for performance and high disponibility.
+Filepoint is the Gearpoint's file management service. It's built for performance and high availability.
 
 ## Tech Stack
 
@@ -59,7 +59,8 @@ Now, you'll need to setup your environment configuration. Here we'll be using th
     make run-services
     ```
 
-2. Configure the Webhook listeChange the {{ your_unique_id }} value in your config files to your actual webhook endpoint.
+2. Configure the Webhook listener:
+    First, change the {{ your_unique_id }} value in your config files to your actual webhook endpoint.
 
     You can use the local webhooks.site deploy at [localhost:8084](http://localhost:8084) or any other webhooks listener.
 

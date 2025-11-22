@@ -6,14 +6,14 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/dgrijalva/jwt-go"
+	"github.com/golang-jwt/jwt/v5"
 )
 
 // Claims defines the JWT struct
 type Claims struct {
 	Email string `json:"email"`
 	ID    string `json:"id"`
-	jwt.StandardClaims
+	jwt.RegisteredClaims
 }
 
 // ExtractJWTFromRequest gets the JWT from the request
