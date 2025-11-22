@@ -1,0 +1,21 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  # Filepoint API metrics
+  - job_name: 'filepoint'
+    static_configs:
+      - targets: ['filepoint:9001']
+    metrics_path: '/v1/metrics'
+
+  # Filepoint Webhook Sender metrics
+  - job_name: 'filepoint-webhooks'
+    static_configs:
+      - targets: ['filepoint-webhooks-sender:9001']
+    metrics_path: '/v1/metrics'
+
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
