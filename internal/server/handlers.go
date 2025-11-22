@@ -3,7 +3,9 @@ package server
 import (
 	"github.com/gearpoint/filepoint/config"
 	"github.com/gearpoint/filepoint/internal/controllers"
+	"github.com/gearpoint/filepoint/pkg/logger"
 	"github.com/gin-gonic/gin"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	swaggerfiles "github.com/swaggo/files"
 	gswagger "github.com/swaggo/gin-swagger"
@@ -21,7 +23,19 @@ func (s *Server) MapHandlers() error {
 	})
 
 	v1.GET("/docs/*any", gswagger.WrapHandler(swaggerfiles.Handler))
-	v1.GET("/health", controllers.HealthController{}.HealthCheck)
+
+	// Metrics endpoint for Prometheus
+	v1.GET("/metrics", gin.WrapH(promhttp.Handler()))
+
+	// Health check endpoints
+	healthController := controllers.NewHealthController(
+		s.awsRepository,
+		s.redisRepository,
+		logger.NewLogger(s.config.Debug),
+	)
+	v1.GET("/health", healthController.HealthCheck)
+	v1.GET("/health/live", healthController.LivenessCheck)
+	v1.GET("/health/ready", healthController.ReadinessCheck)
 
 	upload := v1.Group(string(config.Upload))
 	{
